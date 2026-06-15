@@ -4,7 +4,7 @@ import { createSession } from "@/lib/store";
 export const runtime = "nodejs";
 
 export async function POST() {
-  const session = createSession();
+  const session = await createSession();
 
   return NextResponse.json({
     session,

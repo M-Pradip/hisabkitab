@@ -1,6 +1,7 @@
 "use client";
 
 import { calculateSplits } from "@/lib/calculations";
+import { clearSessionViewerState } from "@/lib/sessionStorage";
 import { useSessionState } from "@/lib/useSessionState";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
@@ -31,6 +32,7 @@ export default function ClaimPage() {
       ? "claim"
       : "who";
   });
+  const [closing, setClosing] = useState(false);
   const palette = ["#e63946", "#1c2f6e", "#2dc653", "#f4a728", "#7a2ea8"];
 
   const totals = useMemo(() => calculateSplits(session), [session]);
@@ -95,6 +97,20 @@ export default function ClaimPage() {
 
   const goToResults = () => {
     setScreen("split");
+  };
+
+  const closeSession = async () => {
+    setClosing(true);
+
+    try {
+      await fetch(`/api/session/${sessionId}`, {
+        method: "DELETE",
+      });
+      clearSessionViewerState(sessionId);
+      router.replace("/");
+    } finally {
+      setClosing(false);
+    }
   };
 
   if (status === "loading") {
