@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { clearSessionViewerState } from "@/lib/sessionStorage";
 
 function BrandMark() {
   return (
@@ -46,7 +47,8 @@ export default function HomePage() {
       });
 
       const data = await response.json();
-      router.push(`/session/${data.session.id}`);
+      clearSessionViewerState();
+      router.replace(`/session/${data.session.id}`);
     } finally {
       setCreating(false);
     }

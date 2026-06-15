@@ -1,9 +1,10 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
 import { calculateSplits } from "@/lib/calculations";
 import { useSessionState } from "@/lib/useSessionState";
+import Link from "next/link";
+import { useParams, useRouter } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
 
 function formatRs(value) {
   return `Rs ${Math.round(value || 0).toLocaleString("en-IN")}`;
@@ -26,7 +27,9 @@ export default function ClaimPage() {
       return "who";
     }
 
-    return window.localStorage.getItem(`hk:viewer:${sessionId}`) ? "claim" : "who";
+    return window.localStorage.getItem(`hk:viewer:${sessionId}`)
+      ? "claim"
+      : "who";
   });
   const palette = ["#e63946", "#1c2f6e", "#2dc653", "#f4a728", "#7a2ea8"];
 
@@ -36,7 +39,9 @@ export default function ClaimPage() {
   const participantCount = session?.participants?.length || 0;
   const itemCount = session?.items?.length || 0;
 
-  const currentUser = session?.participants?.find((participant) => participant.id === selectedUserId);
+  const currentUser = session?.participants?.find(
+    (participant) => participant.id === selectedUserId,
+  );
 
   const currentUserClaims = useMemo(() => {
     if (!currentUser) {
@@ -45,12 +50,28 @@ export default function ClaimPage() {
 
     return new Set(
       (session?.items || [])
-        .filter((item) => (session?.claims?.[item.id] || []).includes(currentUser.id))
-        .map((item) => item.id)
+        .filter((item) =>
+          (session?.claims?.[item.id] || []).includes(currentUser.id),
+        )
+        .map((item) => item.id),
     );
   }, [currentUser, session]);
 
   const claimableItems = session?.items || [];
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const savedViewerId = window.localStorage.getItem(`hk:viewer:${sessionId}`);
+    const timer = window.setTimeout(() => {
+      setSelectedUserId(savedViewerId);
+      setScreen(savedViewerId ? "claim" : "who");
+    }, 0);
+
+    return () => window.clearTimeout(timer);
+  }, [sessionId]);
 
   const selectUser = (participant) => {
     setSelectedUserId(participant.id);
@@ -88,8 +109,16 @@ export default function ClaimPage() {
     return (
       <main className="flex min-h-screen items-center justify-center bg-[#f5f0eb] px-5 py-5">
         <div className="app-shell text-center">
-          <h1 className="text-3xl font-bold text-[#1a1a2e]">Session not found</h1>
+          <h1 className="text-3xl font-bold text-[#1a1a2e]">
+            Session not found
+          </h1>
           <p className="mt-2 text-[#8e8ea0]">{error}</p>
+          <Link
+            href="/"
+            className="mx-auto mt-5 inline-flex h-[52px] items-center justify-center rounded-full bg-[#243b84] px-6 text-sm font-semibold text-white"
+          >
+            Home
+          </Link>
         </div>
       </main>
     );
@@ -101,6 +130,12 @@ export default function ClaimPage() {
         {screen === "who" ? (
           <div className="screen active" id="screen-who">
             <div className="receipt-banner" style={{ marginTop: 8 }}>
+              <Link
+                href="/"
+                className="mr-2 inline-flex h-10 items-center justify-center rounded-full border border-white/30 bg-white/10 px-4 text-xs font-semibold text-white"
+              >
+                Home
+              </Link>
               <div className="receipt-icon">🧾</div>
               <div className="receipt-info">
                 <div className="receipt-title">{sessionTitle}</div>
@@ -112,7 +147,9 @@ export default function ClaimPage() {
             </div>
 
             <div className="who-heading">Select Your Name</div>
-            <div className="who-subheading">Choose the participant you want to control</div>
+            <div className="who-subheading">
+              Choose the participant you want to control
+            </div>
 
             <div className="who-grid">
               {session?.participants?.map((participant, index) => (
@@ -154,6 +191,12 @@ export default function ClaimPage() {
         {screen === "claim" && currentUser ? (
           <div className="screen active" id="screen-claim">
             <div className="top-bar">
+              <Link
+                href="/"
+                className="rounded-full border border-[#c7c7cc] bg-white px-4 py-2 text-xs font-semibold text-[#1a1a2e]"
+              >
+                Home
+              </Link>
               <button
                 type="button"
                 className="back-btn"
@@ -179,11 +222,15 @@ export default function ClaimPage() {
               <div className="receipt-total">{formatRs(totalBill)}</div>
             </div>
 
-            <div className={`instruction ${currentUserClaims.size ? "hidden" : ""}`}>
+            <div
+              className={`instruction ${currentUserClaims.size ? "hidden" : ""}`}
+            >
               Tap items you consumed to claim them
             </div>
 
-            <div className={`done-panel ${currentUserClaims.size ? "show" : ""}`}>
+            <div
+              className={`done-panel ${currentUserClaims.size ? "show" : ""}`}
+            >
               ✅ Claim saved. Tap split bill when everyone is done.
             </div>
 
@@ -202,7 +249,9 @@ export default function ClaimPage() {
                   const claimantNames = (session?.claims?.[item.id] || [])
                     .map(
                       (participantId) =>
-                        session?.participants?.find((participant) => participant.id === participantId)?.name
+                        session?.participants?.find(
+                          (participant) => participant.id === participantId,
+                        )?.name,
                     )
                     .filter(Boolean);
 
@@ -217,11 +266,14 @@ export default function ClaimPage() {
                       <div className="item-body">
                         <div className="item-name">{item.name}</div>
                         <div className="item-qty-price">
-                          {formatRs(item.price)} · claimed by {claimCount} participant
+                          {formatRs(item.price)} · claimed by {claimCount}{" "}
+                          participant
                           {claimCount === 1 ? "" : "s"}
                         </div>
                         <div className="item-unit-price">
-                          {claimantNames.length ? claimantNames.join(", ") : "No one claimed yet"}
+                          {claimantNames.length
+                            ? claimantNames.join(", ")
+                            : "No one claimed yet"}
                         </div>
                       </div>
                       <div className="item-right">
@@ -251,6 +303,12 @@ export default function ClaimPage() {
         {screen === "split" ? (
           <div className="screen active" id="screen-split">
             <div className="top-bar">
+              <Link
+                href="/"
+                className="rounded-full border border-[#c7c7cc] bg-white px-4 py-2 text-xs font-semibold text-[#1a1a2e]"
+              >
+                Home
+              </Link>
               <button
                 type="button"
                 className="back-btn"
@@ -273,7 +331,11 @@ export default function ClaimPage() {
 
             <div className="split-list">
               {totals.participantTotals.map((participant, index) => (
-                <div className="split-row" key={participant.id} style={{ animationDelay: `${index * 0.06}s` }}>
+                <div
+                  className="split-row"
+                  key={participant.id}
+                  style={{ animationDelay: `${index * 0.06}s` }}
+                >
                   <div className="item-emoji-sm">
                     {participant.name.charAt(0).toUpperCase()}
                   </div>
@@ -293,7 +355,9 @@ export default function ClaimPage() {
                     </div>
                   </div>
                   <div className="split-amount-col">
-                    <div className="split-amount">{formatRs(participant.total)}</div>
+                    <div className="split-amount">
+                      {formatRs(participant.total)}
+                    </div>
                   </div>
                 </div>
               ))}
@@ -302,7 +366,8 @@ export default function ClaimPage() {
             {totals.hasUnassigned ? (
               <div className="bill-note mb-4">
                 <span style={{ color: "var(--muted)", fontSize: ".78rem" }}>
-                  Warning: <b>{totals.unassignedItems.length}</b> unassigned item
+                  Warning: <b>{totals.unassignedItems.length}</b> unassigned
+                  item
                   {totals.unassignedItems.length === 1 ? "" : "s"}.
                 </span>
               </div>
@@ -319,7 +384,9 @@ export default function ClaimPage() {
               type="button"
               className="btn btn-green"
               onClick={() =>
-                alert(`Split completed for ${sessionTitle}. All client views are synced.`)
+                alert(
+                  `Split completed for ${sessionTitle}. All client views are synced.`,
+                )
               }
             >
               Done

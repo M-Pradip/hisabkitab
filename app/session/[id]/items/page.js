@@ -1,10 +1,10 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
 import ItemList from "@/components/ItemList";
 import SessionHeader from "@/components/SessionHeader";
 import { useSessionState } from "@/lib/useSessionState";
+import { useParams, useRouter } from "next/navigation";
+import { useMemo, useState } from "react";
 
 function makeId() {
   return crypto.randomUUID();
@@ -38,7 +38,9 @@ export default function ItemsPage() {
     return (
       <main className="flex min-h-screen items-center justify-center bg-[#f0f0f5] px-4 py-5">
         <div className="screen-panel text-center">
-          <h1 className="text-3xl font-bold text-[#1c1c1e]">Session not found</h1>
+          <h1 className="text-3xl font-bold text-[#1c1c1e]">
+            Session not found
+          </h1>
           <p className="mt-2 text-[#666]">{error}</p>
         </div>
       </main>
@@ -66,19 +68,27 @@ export default function ItemsPage() {
     setItemPrice("");
   };
 
-  const hostName = session?.participants?.find((participant) => participant.role === "host")?.name;
+  const hostName = session?.participants?.find(
+    (participant) => participant.role === "host",
+  )?.name;
 
   return (
     <main className="flex min-h-screen justify-center bg-[#f0f0f5] px-4 py-5">
       <div className="screen-panel">
         <SessionHeader
           title="Assign Items"
-          badge={hostName ? `Host: ${hostName}` : `${session?.participants?.length || 0} people`}
+          badge={
+            hostName
+              ? `Host: ${hostName}`
+              : `${session?.participants?.length || 0} people`
+          }
+          homeHref="/"
           backHref={`/session/${sessionId}/participants`}
-          rightContent={{ copyText: shareUrl }}
         />
 
-        <p className="hint">Host adds items here, then shares the link for participants to join</p>
+        <p className="hint">
+          Host adds items here, then shares the link for participants to join
+        </p>
 
         <div className="rounded-[16px] bg-white p-4">
           <div className="mb-3 text-[11px] font-bold tracking-[0.07em] text-[#aaa]">
@@ -120,9 +130,7 @@ export default function ItemsPage() {
         <div className="share-card">
           <p className="share-label">SHARE WITH YOUR GROUP</p>
           <div className="share-row">
-            <span className="share-link">
-              /session/{sessionId}/claim
-            </span>
+            <span className="share-link">/session/{sessionId}/claim</span>
             <button
               type="button"
               className="copy-btn"

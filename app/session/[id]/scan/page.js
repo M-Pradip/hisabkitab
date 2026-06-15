@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useSessionState } from "@/lib/useSessionState";
 import StepDots from "@/components/StepDots";
@@ -27,6 +28,12 @@ export default function ScanReceiptPage() {
         <div className="w-full max-w-[430px] rounded-[36px] bg-[#f0f0f5] p-5 text-center shadow-[0_24px_60px_rgba(0,0,0,0.18)]">
           <h1 className="text-2xl font-bold text-[#1c1c1e]">Session not found</h1>
           <p className="mt-2 text-[#666]">{error}</p>
+          <Link
+            href="/"
+            className="mt-5 inline-flex h-[52px] items-center justify-center rounded-[14px] bg-[#1c1c1e] px-6 text-sm font-semibold text-white"
+          >
+            Home
+          </Link>
         </div>
       </main>
     );
@@ -43,6 +50,12 @@ export default function ScanReceiptPage() {
     <main className="flex min-h-screen justify-center bg-[#dde2ed] px-5 py-6">
       <div className="page">
         <div className="nav">
+          <Link
+            href="/"
+            className="rounded-full border border-[#c7c7cc] bg-white px-4 py-2 text-sm font-semibold text-[#1c1c1e]"
+          >
+            Home
+          </Link>
           <button
             type="button"
             onClick={() => router.push(`/session/${sessionId}`)}
