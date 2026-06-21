@@ -2,13 +2,68 @@
 
 import { calculateSplits } from "@/lib/calculations";
 import { clearSessionViewerState } from "@/lib/sessionStorage";
+import { getPaymentProviderMeta, normalizePaymentProvider } from "@/lib/paymentOptions";
 import { useSessionState } from "@/lib/useSessionState";
 import Link from "next/link";
+import Image from "next/image";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
 function formatRs(value) {
   return `Rs ${Math.round(value || 0).toLocaleString("en-IN")}`;
+}
+
+function PaymentCard({ provider, qrImage, qrFileName }) {
+  const meta = getPaymentProviderMeta(provider);
+
+  return (
+    <div className="mb-4 rounded-[24px] border border-[#dfe3f2] bg-white p-4 shadow-[0_4px_15px_rgba(0,0,0,0.05)]">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <div className="text-[11px] font-bold tracking-[0.16em] text-[#8e8ea7]">
+            PAYMENT
+          </div>
+          <div className="mt-1 text-[20px] font-extrabold text-[#1d1d43]">
+            {meta.label}
+          </div>
+          <div className="mt-1 text-[13px] leading-6 text-[#6f6f86]">
+            {meta.description}
+          </div>
+        </div>
+        <span
+          className="rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-white"
+          style={{ background: meta.accent }}
+        >
+          Ready
+        </span>
+      </div>
+
+      {qrImage ? (
+        <div className="mt-4 overflow-hidden rounded-[20px] border border-[#e8e1dc] bg-[#faf8f7] p-4">
+          <div className="mb-3 flex items-center justify-between gap-2">
+            <div className="text-[13px] font-semibold text-[#1d1d43]">
+              {qrFileName || `${meta.label} QR`}
+            </div>
+            <div className="rounded-full bg-[#eef2ff] px-3 py-1 text-[11px] font-semibold text-[#243b84]">
+              Scan to pay
+            </div>
+          </div>
+          <Image
+            src={qrImage}
+            alt={`${meta.label} QR code`}
+            width={320}
+            height={320}
+            unoptimized
+            className="mx-auto max-h-[280px] w-full rounded-[16px] object-contain"
+          />
+        </div>
+      ) : (
+        <div className="mt-4 rounded-[20px] border border-dashed border-[#d8d3cf] bg-[#faf8f7] px-4 py-5 text-[14px] leading-7 text-[#6f6f86]">
+          The host has not uploaded a QR yet.
+        </div>
+      )}
+    </div>
+  );
 }
 
 export default function ClaimPage() {
@@ -40,6 +95,11 @@ export default function ClaimPage() {
   const totalBill = totals.grandTotal;
   const participantCount = session?.participants?.length || 0;
   const itemCount = session?.items?.length || 0;
+  const paymentProvider = normalizePaymentProvider(
+    session?.paymentProvider || session?.paymentMethod,
+  );
+  const paymentQrImage = session?.paymentQrImage || "";
+  const paymentQrFileName = session?.paymentQrFileName || "";
 
   const currentUser = session?.participants?.find(
     (participant) => participant.id === selectedUserId,
@@ -103,11 +163,14 @@ export default function ClaimPage() {
     setClosing(true);
 
     try {
-      await fetch(`/api/session/${sessionId}`, {
-        method: "DELETE",
+      const response = await updateSession({
+        type: "close_session",
       });
-      clearSessionViewerState(sessionId);
-      router.replace("/");
+
+      if (response) {
+        clearSessionViewerState(sessionId);
+        router.replace("/");
+      }
     } finally {
       setClosing(false);
     }
@@ -161,6 +224,12 @@ export default function ClaimPage() {
               </div>
               <div className="receipt-total">{formatRs(totalBill)}</div>
             </div>
+
+            <PaymentCard
+              provider={paymentProvider}
+              qrImage={paymentQrImage}
+              qrFileName={paymentQrFileName}
+            />
 
             <div className="who-heading">Select Your Name</div>
             <div className="who-subheading">
@@ -237,6 +306,12 @@ export default function ClaimPage() {
               </div>
               <div className="receipt-total">{formatRs(totalBill)}</div>
             </div>
+
+            <PaymentCard
+              provider={paymentProvider}
+              qrImage={paymentQrImage}
+              qrFileName={paymentQrFileName}
+            />
 
             <div
               className={`instruction ${currentUserClaims.size ? "hidden" : ""}`}
@@ -396,16 +471,19 @@ export default function ClaimPage() {
               </span>
             </div>
 
+            <PaymentCard
+              provider={paymentProvider}
+              qrImage={paymentQrImage}
+              qrFileName={paymentQrFileName}
+            />
+
             <button
               type="button"
               className="btn btn-green"
-              onClick={() =>
-                alert(
-                  `Split completed for ${sessionTitle}. All client views are synced.`,
-                )
-              }
+              onClick={closeSession}
+              disabled={closing}
             >
-              Done
+              {closing ? "Closing..." : "Close Session"}
             </button>
           </div>
         ) : null}

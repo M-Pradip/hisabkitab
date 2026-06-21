@@ -1,19 +1,47 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { clearSessionViewerState } from "@/lib/sessionStorage";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
 
 function BrandMark() {
   return (
     <div className="mb-[30px] text-center">
       <div className="mx-auto mb-4 flex h-[120px] w-[120px] items-center justify-center rounded-[30px] bg-[#f5f3ff] shadow-[0_10px_30px_rgba(0,0,0,0.08)]">
-        <svg viewBox="0 0 120 120" className="h-[88px] w-[88px]" aria-hidden="true">
+        <svg
+          viewBox="0 0 120 120"
+          className="h-[88px] w-[88px]"
+          aria-hidden="true"
+        >
           <rect x="28" y="18" width="60" height="72" rx="10" fill="#2d2b84" />
           <rect x="48" y="26" width="40" height="54" rx="8" fill="#f4c542" />
-          <rect x="33" y="33" width="20" height="6" rx="3" fill="#ffffff" opacity="0.95" />
-          <rect x="33" y="45" width="20" height="6" rx="3" fill="#ffffff" opacity="0.95" />
-          <rect x="33" y="57" width="20" height="6" rx="3" fill="#ffffff" opacity="0.95" />
+          <rect
+            x="33"
+            y="33"
+            width="20"
+            height="6"
+            rx="3"
+            fill="#ffffff"
+            opacity="0.95"
+          />
+          <rect
+            x="33"
+            y="45"
+            width="20"
+            height="6"
+            rx="3"
+            fill="#ffffff"
+            opacity="0.95"
+          />
+          <rect
+            x="33"
+            y="57"
+            width="20"
+            height="6"
+            rx="3"
+            fill="#ffffff"
+            opacity="0.95"
+          />
           <circle cx="57" cy="41" r="3.5" fill="#fff" />
           <circle cx="67" cy="41" r="3.5" fill="#fff" />
           <circle cx="77" cy="41" r="3.5" fill="#fff" />
@@ -101,12 +129,6 @@ export default function HomePage() {
             <span className="text-[1.1em]">+</span>
             Create a Session
           </button>
-
-          <div className="mb-[28px] flex items-center text-center text-[#9b9bb7]">
-            <span className="flex-1 border-b border-[#e8e8f3]" />
-            <span className="px-3">or enter a code</span>
-            <span className="flex-1 border-b border-[#e8e8f3]" />
-          </div>
 
           <div className="flex gap-[14px] max-md:flex-col">
             <input
