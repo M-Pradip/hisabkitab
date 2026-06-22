@@ -1,6 +1,5 @@
 "use client";
 
-import ItemList from "@/components/ItemList";
 import SessionHeader from "@/components/SessionHeader";
 import { useSessionState } from "@/lib/useSessionState";
 import { useParams, useRouter } from "next/navigation";
@@ -61,11 +60,36 @@ export default function ItemsPage() {
         id: makeId(),
         name,
         price,
+        quantity: 1, // include quantity when adding a new item
       },
     });
 
     setItemName("");
     setItemPrice("");
+  };
+
+  // New: update item quantity by delta (e.g. +1 or -1). Minimum quantity is 1.
+  const updateItemQuantity = async (itemId, delta) => {
+    const existing = session?.items?.find((i) => i.id === itemId);
+    if (!existing) return;
+
+    const newQty = Math.max(1, (existing.quantity || 1) + delta);
+
+    await updateSession({
+      type: "update_item",
+      item: {
+        ...existing,
+        quantity: newQty,
+      },
+    });
+  };
+
+  // New: delete an item
+  const deleteItem = async (itemId) => {
+    await updateSession({
+      type: "delete_item",
+      itemId,
+    });
   };
 
   const hostName = session?.participants?.find(
@@ -121,11 +145,64 @@ export default function ItemsPage() {
           </div>
         </div>
 
-        <ItemList
-          title="Current Items"
-          subtitle={`${session?.items?.length || 0} live items`}
-          items={session?.items || []}
-        />
+        {/* Replaced ItemList with inline list so we can show quantity, +/- and Delete */}
+        <div className="mt-4">
+          <div className="mb-3 text-[11px] font-bold tracking-[0.07em] text-[#aaa]">
+            CURRENT ITEMS
+          </div>
+
+          <div className="rounded-[12px] bg-white divide-y">
+            {(session?.items || []).length === 0 ? (
+              <div className="p-4 text-[#666]">No items yet</div>
+            ) : (
+              (session.items || []).map((it) => (
+                <div
+                  key={it.id}
+                  className="flex items-center justify-between p-4"
+                >
+                  <div>
+                    <div className="font-semibold text-[16px] text-[#111]">
+                      {it.name}
+                    </div>
+                    <div className="text-sm text-[#666]">
+                      Price: ${Number(it.price).toFixed(2)}
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center rounded-full border bg-[#faf8f7]">
+                      <button
+                        type="button"
+                        onClick={() => updateItemQuantity(it.id, -1)}
+                        className="px-3 py-2 text-[16px]"
+                      >
+                        −
+                      </button>
+                      <div className="px-4 text-[14px] font-medium">
+                        {it.quantity || 1}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => updateItemQuantity(it.id, 1)}
+                        className="px-3 py-2 text-[16px]"
+                      >
+                        +
+                      </button>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => deleteItem(it.id)}
+                      className="text-sm text-red-600"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
 
         <div className="share-card">
           <p className="share-label">SHARE WITH YOUR GROUP</p>
