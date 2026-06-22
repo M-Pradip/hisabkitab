@@ -3,7 +3,7 @@
 import SessionHeader from "@/components/SessionHeader";
 import { useSessionState } from "@/lib/useSessionState";
 import { useParams, useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 
 function makeId() {
   return crypto.randomUUID();
@@ -16,6 +16,12 @@ export default function ItemsPage() {
   const { session, status, error, updateSession } = useSessionState(sessionId);
   const [itemName, setItemName] = useState("");
   const [itemPrice, setItemPrice] = useState("");
+
+  // New: local, optimistic items state
+  const [localItems, setLocalItems] = useState(session?.items || []);
+  useEffect(() => {
+    setLocalItems(session?.items || []);
+  }, [session?.items]);
 
   const shareUrl = useMemo(() => {
     if (typeof window === "undefined") {
@@ -54,15 +60,26 @@ export default function ItemsPage() {
       return;
     }
 
-    await updateSession({
-      type: "add_item",
-      item: {
-        id: makeId(),
-        name,
-        price,
-        quantity: 1, // include quantity when adding a new item
-      },
-    });
+    const newItem = {
+      id: makeId(),
+      name,
+      price,
+      quantity: 1, // include quantity when adding a new item
+    };
+
+    // optimistic update
+    setLocalItems((prev) => [...prev, newItem]);
+
+    try {
+      await updateSession({
+        type: "add_item",
+        item: newItem,
+      });
+    } catch (err) {
+      // revert on error
+      setLocalItems((prev) => prev.filter((i) => i.id !== newItem.id));
+      console.error("Failed to add item:", err);
+    }
 
     setItemName("");
     setItemPrice("");
@@ -70,26 +87,47 @@ export default function ItemsPage() {
 
   // New: update item quantity by delta (e.g. +1 or -1). Minimum quantity is 1.
   const updateItemQuantity = async (itemId, delta) => {
-    const existing = session?.items?.find((i) => i.id === itemId);
+    const existing = (session?.items || localItems).find((i) => i.id === itemId);
     if (!existing) return;
 
     const newQty = Math.max(1, (existing.quantity || 1) + delta);
 
-    await updateSession({
-      type: "update_item",
-      item: {
-        ...existing,
-        quantity: newQty,
-      },
-    });
+    // optimistic update
+    setLocalItems((prev) =>
+      prev.map((it) => (it.id === itemId ? { ...it, quantity: newQty } : it)),
+    );
+
+    try {
+      await updateSession({
+        type: "update_item",
+        item: {
+          ...existing,
+          quantity: newQty,
+        },
+      });
+    } catch (err) {
+      // revert on error: reset from authoritative session or roll back one delta
+      setLocalItems(session?.items || (prev => prev.map(it => it.id === itemId ? { ...it, quantity: existing.quantity || 1 } : it)));
+      console.error("Failed to update item quantity:", err);
+    }
   };
 
   // New: delete an item
   const deleteItem = async (itemId) => {
-    await updateSession({
-      type: "delete_item",
-      itemId,
-    });
+    // optimistic update
+    const previous = localItems;
+    setLocalItems((prev) => prev.filter((i) => i.id !== itemId));
+
+    try {
+      await updateSession({
+        type: "delete_item",
+        itemId,
+      });
+    } catch (err) {
+      // revert on error
+      setLocalItems(previous);
+      console.error("Failed to delete item:", err);
+    }
   };
 
   const hostName = session?.participants?.find(
@@ -152,10 +190,10 @@ export default function ItemsPage() {
           </div>
 
           <div className="rounded-[12px] bg-white divide-y">
-            {(session?.items || []).length === 0 ? (
+            {(localItems || []).length === 0 ? (
               <div className="p-4 text-[#666]">No items yet</div>
             ) : (
-              (session.items || []).map((it) => (
+              (localItems || []).map((it) => (
                 <div
                   key={it.id}
                   className="flex items-center justify-between p-4"
