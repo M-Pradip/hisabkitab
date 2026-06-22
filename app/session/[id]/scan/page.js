@@ -43,7 +43,7 @@ export default function ScanReceiptPage() {
   const participantCount = session?.participants?.length || 4;
   const itemCount = session?.items?.length || 5;
   const totalText = `Rs ${(
-    session?.items?.reduce((sum, item) => sum + Number(item.price || 0), 0) || 2558
+    session?.items?.reduce((sum, item) => sum + (Number(item.price || 0) * (Number(item.quantity) || 1)), 0) || 2558
   ).toLocaleString("en-IN")}`;
 
   return (
@@ -110,15 +110,15 @@ export default function ScanReceiptPage() {
             session?.items?.length
               ? session.items
               : [
-                  { id: 1, name: "Momo (Veg) x 2", price: 360 },
-                  { id: 2, name: "Dal Bhat Set x 3", price: 720 },
-                  { id: 3, name: "Chowmein x 1", price: 180 },
-                  { id: 4, name: "Cold Drinks x 4", price: 320 },
-                  { id: 5, name: "Beer x 2", price: 500 },
-                  { id: 6, name: "Service (10%)", price: 208 },
-                  { id: 7, name: "VAT (13%)", price: 270 },
-                  { id: 8, name: "Total", price: 2558 },
-                ]
+                { id: 1, name: "Momo (Veg) x 2", price: 360 },
+                { id: 2, name: "Dal Bhat Set x 3", price: 720 },
+                { id: 3, name: "Chowmein x 1", price: 180 },
+                { id: 4, name: "Cold Drinks x 4", price: 320 },
+                { id: 5, name: "Beer x 2", price: 500 },
+                { id: 6, name: "Service (10%)", price: 208 },
+                { id: 7, name: "VAT (13%)", price: 270 },
+                { id: 8, name: "Total", price: 2558 },
+              ]
           }
         />
 

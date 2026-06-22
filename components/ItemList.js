@@ -11,13 +11,17 @@ export default function ItemList({ items = [], title = "Items", subtitle = "" })
           items.map((item, index) => (
             <div
               key={item.id}
-              className={`flex justify-between border-b border-[#f1f3f8] px-4 py-[11px] ${
-                index === items.length - 1 ? "border-b-0" : ""
-              }`}
+              className={`flex justify-between border-b border-[#f1f3f8] px-4 py-[11px] ${index === items.length - 1 ? "border-b-0" : ""
+                }`}
             >
-              <span className="text-sm text-[#1a1f3c]">{item.name}</span>
+              <div>
+                <span className="text-sm text-[#1a1f3c]">{item.name}</span>
+                {item.quantity && item.quantity > 1 ? (
+                  <div className="text-xs text-[#999]">Qty: {item.quantity}</div>
+                ) : null}
+              </div>
               <span className="text-sm text-[#1a1f3c]">
-                Rs {Number(item.price || 0).toFixed(0)}
+                Rs {Number((item.price || 0) * (item.quantity || 1)).toFixed(0)}
               </span>
             </div>
           ))

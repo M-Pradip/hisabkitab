@@ -65,8 +65,13 @@ export default function AssignmentGrid({
               <div className="item-top">
                 <div className="item-name-wrap">
                   <span className="item-name">{item.name}</span>
+                  {item.quantity && item.quantity > 1 ? (
+                    <span className="text-xs text-[#999]">Qty: {item.quantity}</span>
+                  ) : null}
                 </div>
-                <span className="item-price">{formatMoney(item.price)}</span>
+                <span className="item-price">
+                  {formatMoney(item.price * (item.quantity || 1))}
+                </span>
               </div>
 
               <div className="avatar-row">

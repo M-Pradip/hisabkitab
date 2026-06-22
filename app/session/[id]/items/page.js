@@ -17,7 +17,6 @@ export default function ItemsPage() {
   const [itemName, setItemName] = useState("");
   const [itemPrice, setItemPrice] = useState("");
 
-  // New: local, optimistic items state
   const [localItems, setLocalItems] = useState(session?.items || []);
   useEffect(() => {
     setLocalItems(session?.items || []);
@@ -64,10 +63,9 @@ export default function ItemsPage() {
       id: makeId(),
       name,
       price,
-      quantity: 1, // include quantity when adding a new item
+      quantity: 1,
     };
 
-    // optimistic update
     setLocalItems((prev) => [...prev, newItem]);
 
     try {
@@ -75,47 +73,47 @@ export default function ItemsPage() {
         type: "add_item",
         item: newItem,
       });
+      setItemName("");
+      setItemPrice("");
     } catch (err) {
-      // revert on error
       setLocalItems((prev) => prev.filter((i) => i.id !== newItem.id));
       console.error("Failed to add item:", err);
+      alert("Failed to add item. Please try again.");
     }
-
-    setItemName("");
-    setItemPrice("");
   };
 
-  // New: update item quantity by delta (e.g. +1 or -1). Minimum quantity is 1.
   const updateItemQuantity = async (itemId, delta) => {
-    const existing = (session?.items || localItems).find((i) => i.id === itemId);
+    const existing = localItems.find((i) => i.id === itemId);
     if (!existing) return;
 
     const newQty = Math.max(1, (existing.quantity || 1) + delta);
+    const previousItems = [...localItems];
 
     // optimistic update
     setLocalItems((prev) =>
-      prev.map((it) => (it.id === itemId ? { ...it, quantity: newQty } : it)),
+      prev.map((it) =>
+        it.id === itemId ? { ...it, quantity: newQty } : it
+      )
     );
 
     try {
       await updateSession({
         type: "update_item",
-        item: {
-          ...existing,
-          quantity: newQty,
-        },
+        itemId,
+        quantity: newQty,
       });
     } catch (err) {
-      // revert on error: reset from authoritative session or roll back one delta
-      setLocalItems(session?.items || (prev => prev.map(it => it.id === itemId ? { ...it, quantity: existing.quantity || 1 } : it)));
-      console.error("Failed to update item quantity:", err);
+      // revert on error
+      setLocalItems(previousItems);
+      console.error("Failed to update quantity:", err);
+      alert("Failed to update quantity. Please try again.");
     }
   };
 
-  // New: delete an item
   const deleteItem = async (itemId) => {
+    const previousItems = [...localItems];
+
     // optimistic update
-    const previous = localItems;
     setLocalItems((prev) => prev.filter((i) => i.id !== itemId));
 
     try {
@@ -125,8 +123,9 @@ export default function ItemsPage() {
       });
     } catch (err) {
       // revert on error
-      setLocalItems(previous);
+      setLocalItems(previousItems);
       console.error("Failed to delete item:", err);
+      alert("Failed to delete item. Please try again.");
     }
   };
 
@@ -183,7 +182,6 @@ export default function ItemsPage() {
           </div>
         </div>
 
-        {/* Replaced ItemList with inline list so we can show quantity, +/- and Delete */}
         <div className="mt-4">
           <div className="mb-3 text-[11px] font-bold tracking-[0.07em] text-[#aaa]">
             CURRENT ITEMS
@@ -212,17 +210,17 @@ export default function ItemsPage() {
                       <button
                         type="button"
                         onClick={() => updateItemQuantity(it.id, -1)}
-                        className="px-3 py-2 text-[16px]"
+                        className="px-3 py-2 text-[16px] hover:bg-[#f0f0f0] rounded-l-full"
                       >
                         −
                       </button>
-                      <div className="px-4 text-[14px] font-medium">
+                      <div className="px-4 text-[14px] font-medium min-w-[40px] text-center">
                         {it.quantity || 1}
                       </div>
                       <button
                         type="button"
                         onClick={() => updateItemQuantity(it.id, 1)}
-                        className="px-3 py-2 text-[16px]"
+                        className="px-3 py-2 text-[16px] hover:bg-[#f0f0f0] rounded-r-full"
                       >
                         +
                       </button>
@@ -231,7 +229,7 @@ export default function ItemsPage() {
                     <button
                       type="button"
                       onClick={() => deleteItem(it.id)}
-                      className="text-sm text-red-600"
+                      className="text-sm text-red-600 hover:text-red-700 font-medium"
                     >
                       Delete
                     </button>

@@ -307,12 +307,6 @@ export default function ClaimPage() {
               <div className="receipt-total">{formatRs(totalBill)}</div>
             </div>
 
-            <PaymentCard
-              provider={paymentProvider}
-              qrImage={paymentQrImage}
-              qrFileName={paymentQrFileName}
-            />
-
             <div
               className={`instruction ${currentUserClaims.size ? "hidden" : ""}`}
             >
@@ -357,9 +351,17 @@ export default function ClaimPage() {
                       <div className="item-body">
                         <div className="item-name">{item.name}</div>
                         <div className="item-qty-price">
-                          {formatRs(item.price)} · claimed by {claimCount}{" "}
-                          participant
-                          {claimCount === 1 ? "" : "s"}
+                          {item.quantity && item.quantity > 1 ? (
+                            <>
+                              {formatRs(item.price)} × {item.quantity} = {formatRs(item.price * item.quantity)} · claimed by {claimCount}{" "}
+                              participant{claimCount === 1 ? "" : "s"}
+                            </>
+                          ) : (
+                            <>
+                              {formatRs(item.price)} · claimed by {claimCount}{" "}
+                              participant{claimCount === 1 ? "" : "s"}
+                            </>
+                          )}
                         </div>
                         <div className="item-unit-price">
                           {claimantNames.length
