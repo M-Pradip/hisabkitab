@@ -422,8 +422,8 @@ export default function DocumentScanner({
                               {item.name}
                             </div>
                             <div className="mt-1 text-[13px] text-[#6f6f86]">
+                              {item.quantity ? `Qty ${item.quantity} · ` : ""}
                               Rs {Number(item.price || 0).toFixed(2)}
-                              {item.quantity ? ` - Qty ${item.quantity}` : ""}
                               {item.source ? ` - ${item.source}` : ""}
                             </div>
                           </div>

@@ -1,6 +1,7 @@
 "use client";
 
 import SessionHeader from "@/components/SessionHeader";
+import ItemList from "@/components/ItemList";
 import { useSessionState } from "@/lib/useSessionState";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";

@@ -66,6 +66,21 @@ const NOISE_KEYWORDS = [
   "payment",
   "qty",
   "quantity",
+  "date",
+  "check",
+  "check #",
+  "check no",
+  "pax",
+  "pax(s)",
+  "guest count",
+  "table no",
+  "table #",
+];
+
+const NOISE_PATTERNS = [
+  /^(?:date|check\s*#?|check\s*no\.?|pax(?:\(s\))?|guest\s*count|table\s*#?|bill\s*#?|order\s*#?)\b/i,
+  /^\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}\b/,
+  /^\d+\s*(?:pax|guest|people|covers)\b/i,
 ];
 
 function text(value: unknown) {
@@ -78,7 +93,10 @@ function normalize(value: string) {
 
 function hasNoise(value: string) {
   const lower = value.toLowerCase();
-  return NOISE_KEYWORDS.some((keyword) => lower.includes(keyword));
+  return (
+    NOISE_KEYWORDS.some((keyword) => lower.includes(keyword)) ||
+    NOISE_PATTERNS.some((pattern) => pattern.test(value))
+  );
 }
 
 function hasLetters(value: string) {
@@ -121,6 +139,33 @@ function stripQuantity(value: string) {
     .trim();
 }
 
+function extractLeadingQuantity(value: string) {
+  const match = value.match(/^(\d{1,3})\s+(.+)$/);
+
+  if (!match) {
+    return { name: value, quantity: null };
+  }
+
+  const quantity = Number(match[1]);
+  const name = normalize(match[2]);
+
+  if (!Number.isFinite(quantity) || quantity <= 0 || !hasLetters(name)) {
+    return { name: value, quantity: null };
+  }
+
+  return { name, quantity };
+}
+
+function normalizeItemName(value: string) {
+  const stripped = stripQuantity(value);
+  const leading = extractLeadingQuantity(stripped);
+
+  return {
+    name: leading.name,
+    quantity: leading.quantity,
+  };
+}
+
 function parseReceiptLine(line: string) {
   const cleaned = normalize(line);
 
@@ -145,12 +190,17 @@ function parseReceiptLine(line: string) {
     const rawName = normalize(match.groups.name);
     const price = match.groups.price ? parsePrice(match.groups.price) : null;
     const quantity = match.groups.qty ? Number(match.groups.qty) : parseQuantity(cleaned);
+    const normalizedName = normalizeItemName(rawName);
+    const resolvedQuantity =
+      Number.isFinite(quantity as number) && (quantity as number) > 0
+        ? Math.round(quantity as number)
+        : normalizedName.quantity || undefined;
 
     if (!rawName || !hasLetters(rawName)) {
       continue;
     }
 
-    if (hasNoise(rawName)) {
+    if (hasNoise(rawName) || hasNoise(normalizedName.name)) {
       continue;
     }
 
@@ -158,10 +208,14 @@ function parseReceiptLine(line: string) {
       continue;
     }
 
+    if (!hasLetters(normalizedName.name)) {
+      continue;
+    }
+
     return {
-      name: stripQuantity(rawName),
+      name: normalizedName.name,
       price,
-      quantity: Number.isFinite(quantity as number) && (quantity as number) > 0 ? Math.round(quantity as number) : undefined,
+      quantity: resolvedQuantity,
       rawText: cleaned,
     };
   }
@@ -247,15 +301,22 @@ function extractTableCandidates(result: AzureAnalyzeResult) {
           .join(" "),
       );
 
-      if (!name || !hasLetters(name) || hasNoise(name)) {
+      const normalizedName = normalizeItemName(name);
+
+      if (
+        !normalizedName.name ||
+        !hasLetters(normalizedName.name) ||
+        hasNoise(name) ||
+        hasNoise(normalizedName.name)
+      ) {
         continue;
       }
 
-      const quantity = parseQuantity(name);
+      const quantity = parseQuantity(name) || normalizedName.quantity;
 
       candidates.push({
         id: crypto.randomUUID(),
-        name: stripQuantity(name),
+        name: normalizedName.name,
         price,
         quantity: quantity || undefined,
         source: "table",
