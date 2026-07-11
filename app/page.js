@@ -66,7 +66,7 @@ export default function HomePage() {
   const [code, setCode] = useState("");
   const [creating, setCreating] = useState(false);
 
-  const createSession = async () => {
+  const createSession = async (mode = "details") => {
     setCreating(true);
 
     try {
@@ -76,7 +76,9 @@ export default function HomePage() {
 
       const data = await response.json();
       clearSessionViewerState();
-      router.replace(`/session/${data.session.id}`);
+      router.replace(
+        mode === "scan" ? `/session/${data.session.id}/scan` : `/session/${data.session.id}`,
+      );
     } finally {
       setCreating(false);
     }
@@ -114,7 +116,7 @@ export default function HomePage() {
 
           <button
             type="button"
-            onClick={createSession}
+            onClick={() => createSession("scan")}
             className="mb-[18px] flex h-[68px] w-full items-center justify-center gap-3 rounded-[18px] bg-[#2d2b84] px-5 text-[1rem] font-bold text-white md:h-[72px] md:text-[1.2rem]"
           >
             <span className="text-[1.1em]">+</span>
@@ -123,7 +125,7 @@ export default function HomePage() {
 
           <button
             type="button"
-            onClick={createSession}
+            onClick={() => createSession("details")}
             className="mb-[28px] flex h-[68px] w-full items-center justify-center gap-3 rounded-[18px] border-2 border-[#eceaf9] bg-white px-5 text-[1rem] font-bold text-[#2d2b84] md:h-[72px] md:text-[1.2rem]"
           >
             <span className="text-[1.1em]">+</span>

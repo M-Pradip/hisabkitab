@@ -3,7 +3,7 @@
 import SessionHeader from "@/components/SessionHeader";
 import { useSessionState } from "@/lib/useSessionState";
 import { useParams, useRouter } from "next/navigation";
-import { useMemo, useState, useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 function makeId() {
   return crypto.randomUUID();
@@ -16,11 +16,7 @@ export default function ItemsPage() {
   const { session, status, error, updateSession } = useSessionState(sessionId);
   const [itemName, setItemName] = useState("");
   const [itemPrice, setItemPrice] = useState("");
-
-  const [localItems, setLocalItems] = useState(session?.items || []);
-  useEffect(() => {
-    setLocalItems(session?.items || []);
-  }, [session?.items]);
+  const [itemQuantity, setItemQuantity] = useState("1");
 
   const shareUrl = useMemo(() => {
     if (typeof window === "undefined") {
@@ -54,79 +50,62 @@ export default function ItemsPage() {
   const addItem = async () => {
     const name = itemName.trim();
     const price = Number(itemPrice);
+    const quantity = Number(itemQuantity);
 
-    if (!name || Number.isNaN(price)) {
+    if (
+      !name ||
+      Number.isNaN(price) ||
+      Number.isNaN(quantity) ||
+      quantity <= 0
+    ) {
       return;
     }
 
-    const newItem = {
-      id: makeId(),
-      name,
-      price,
-      quantity: 1,
-    };
+    await updateSession({
+      type: "add_item",
+      item: {
+        id: makeId(),
+        name,
+        price,
+        quantity: Math.max(1, Math.round(quantity)),
+      },
+    });
 
-    setLocalItems((prev) => [...prev, newItem]);
-
-    try {
-      await updateSession({
-        type: "add_item",
-        item: newItem,
-      });
-      setItemName("");
-      setItemPrice("");
-    } catch (err) {
-      setLocalItems((prev) => prev.filter((i) => i.id !== newItem.id));
-      console.error("Failed to add item:", err);
-      alert("Failed to add item. Please try again.");
-    }
+    setItemName("");
+    setItemPrice("");
+    setItemQuantity("1");
   };
 
-  const updateItemQuantity = async (itemId, delta) => {
-    const existing = localItems.find((i) => i.id === itemId);
-    if (!existing) return;
+  const saveItem = async (item) => {
+    const name = String(item.name || "").trim();
+    const price = Number(item.price);
+    const quantity = Number(item.quantity);
 
-    const newQty = Math.max(1, (existing.quantity || 1) + delta);
-    const previousItems = [...localItems];
-
-    // optimistic update
-    setLocalItems((prev) =>
-      prev.map((it) =>
-        it.id === itemId ? { ...it, quantity: newQty } : it
-      )
-    );
-
-    try {
-      await updateSession({
-        type: "update_item",
-        itemId,
-        quantity: newQty,
-      });
-    } catch (err) {
-      // revert on error
-      setLocalItems(previousItems);
-      console.error("Failed to update quantity:", err);
-      alert("Failed to update quantity. Please try again.");
+    if (
+      !name ||
+      Number.isNaN(price) ||
+      Number.isNaN(quantity) ||
+      quantity <= 0
+    ) {
+      return;
     }
+
+    await updateSession({
+      type: "update_item",
+      itemId: item.id,
+      item: {
+        name,
+        price,
+        quantity: Math.max(1, Math.round(quantity)),
+      },
+    });
   };
 
-  const deleteItem = async (itemId) => {
-    const previousItems = [...localItems];
-
-    // optimistic update
-    setLocalItems((prev) => prev.filter((i) => i.id !== itemId));
-
-    try {
-      await updateSession({
-        type: "delete_item",
-        itemId,
-      });
-    } catch (err) {
-      // revert on error
-      setLocalItems(previousItems);
-      console.error("Failed to delete item:", err);
-      alert("Failed to delete item. Please try again.");
-    }
+  const removeItem = async (itemId) => {
+    await updateSession({
+      type: "remove_item",
+      itemId,
+    });
   };
 
   const hostName = session?.participants?.find(
@@ -144,11 +123,12 @@ export default function ItemsPage() {
               : `${session?.participants?.length || 0} people`
           }
           homeHref="/"
-          backHref={`/session/${sessionId}/participants`}
+          backHref={`/session/${sessionId}/scan`}
         />
 
         <p className="hint">
-          Host adds items here, then shares the link for participants to join
+          Scanned receipts populate this list automatically, and you can still
+          edit each row.
         </p>
 
         <div className="rounded-[16px] bg-white p-4">
@@ -162,6 +142,15 @@ export default function ItemsPage() {
               onChange={(event) => setItemName(event.target.value)}
               placeholder="Item name"
               className="h-[52px] min-w-0 flex-1 rounded-[16px] border border-[#e6e1de] bg-[#faf8f7] px-4 text-[16px] outline-none"
+            />
+            <input
+              type="number"
+              min="1"
+              step="1"
+              value={itemQuantity}
+              onChange={(event) => setItemQuantity(event.target.value)}
+              placeholder="Qty"
+              className="h-[52px] w-full rounded-[16px] border border-[#e6e1de] bg-[#faf8f7] px-4 text-[16px] outline-none sm:max-w-[100px]"
             />
             <input
               type="number"
@@ -182,62 +171,19 @@ export default function ItemsPage() {
           </div>
         </div>
 
-        <div className="mt-4">
+        <div className="rounded-[28px] bg-white p-6 shadow-[0_4px_15px_rgba(0,0,0,0.05)]">
           <div className="mb-3 text-[11px] font-bold tracking-[0.07em] text-[#aaa]">
-            CURRENT ITEMS
+            EDIT RECEIPT ITEMS
           </div>
-
-          <div className="rounded-[12px] bg-white divide-y">
-            {(localItems || []).length === 0 ? (
-              <div className="p-4 text-[#666]">No items yet</div>
-            ) : (
-              (localItems || []).map((it) => (
-                <div
-                  key={it.id}
-                  className="flex items-center justify-between p-4"
-                >
-                  <div>
-                    <div className="font-semibold text-[16px] text-[#111]">
-                      {it.name}
-                    </div>
-                    <div className="text-sm text-[#666]">
-                      Price: ${Number(it.price).toFixed(2)}
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-3">
-                    <div className="flex items-center rounded-full border bg-[#faf8f7]">
-                      <button
-                        type="button"
-                        onClick={() => updateItemQuantity(it.id, -1)}
-                        className="px-3 py-2 text-[16px] hover:bg-[#f0f0f0] rounded-l-full"
-                      >
-                        −
-                      </button>
-                      <div className="px-4 text-[14px] font-medium min-w-[40px] text-center">
-                        {it.quantity || 1}
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => updateItemQuantity(it.id, 1)}
-                        className="px-3 py-2 text-[16px] hover:bg-[#f0f0f0] rounded-r-full"
-                      >
-                        +
-                      </button>
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={() => deleteItem(it.id)}
-                      className="text-sm text-red-600 hover:text-red-700 font-medium"
-                    >
-                      Delete
-                    </button>
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
+          <ItemList
+            title="Current Items"
+            subtitle={`${session?.items?.length || 0} live items`}
+            items={session?.items || []}
+            editable
+            emptyMessage="Scan a receipt or add an item above."
+            onUpdateItem={saveItem}
+            onRemoveItem={removeItem}
+          />
         </div>
 
         <div className="share-card">
@@ -263,7 +209,7 @@ export default function ItemsPage() {
             onClick={() => router.push(`/session/${sessionId}/claim`)}
             className="pref-btn"
           >
-            Split Bill →
+            Split Bill {"->"}
           </button>
         </div>
       </div>
