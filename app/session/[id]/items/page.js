@@ -136,13 +136,13 @@ export default function ItemsPage() {
           <div className="mb-3 text-[11px] font-bold tracking-[0.07em] text-[#aaa]">
             ADD ITEM
           </div>
-          <div className="flex gap-3 max-sm:flex-col">
+          <div className="grid gap-3 sm:grid-cols-[minmax(0,6fr)_56px_80px_auto]">
             <input
               type="text"
               value={itemName}
               onChange={(event) => setItemName(event.target.value)}
               placeholder="Item name"
-              className="h-[52px] min-w-0 flex-1 rounded-[16px] border border-[#e6e1de] bg-[#faf8f7] px-4 text-[16px] outline-none"
+              className="h-[58px] min-w-0 rounded-[16px] border border-[#e6e1de] bg-[#faf8f7] px-5 text-[18px] outline-none placeholder:text-[16px] sm:text-[19px] sm:placeholder:text-[18px]"
             />
             <input
               type="number"
@@ -151,7 +151,7 @@ export default function ItemsPage() {
               value={itemQuantity}
               onChange={(event) => setItemQuantity(event.target.value)}
               placeholder="Qty"
-              className="h-[52px] w-full rounded-[16px] border border-[#e6e1de] bg-[#faf8f7] px-4 text-[16px] outline-none sm:max-w-[100px]"
+              className="h-[52px] w-full rounded-[16px] border border-[#e6e1de] bg-[#faf8f7] px-2 text-[14px] outline-none"
             />
             <input
               type="number"
@@ -160,12 +160,12 @@ export default function ItemsPage() {
               value={itemPrice}
               onChange={(event) => setItemPrice(event.target.value)}
               placeholder="Price"
-              className="h-[52px] w-full rounded-[16px] border border-[#e6e1de] bg-[#faf8f7] px-4 text-[16px] outline-none sm:max-w-[120px]"
+              className="h-[52px] w-full rounded-[16px] border border-[#e6e1de] bg-[#faf8f7] px-2 text-[14px] outline-none"
             />
             <button
               type="button"
               onClick={addItem}
-              className="h-[52px] rounded-[16px] bg-[#243b84] px-5 text-[16px] font-semibold text-white"
+              className="h-[52px] rounded-[16px] bg-[#243b84] px-4 text-[14px] font-semibold text-white sm:px-4"
             >
               Add
             </button>

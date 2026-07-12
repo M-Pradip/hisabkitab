@@ -3,7 +3,8 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useParams, useRouter } from "next/navigation";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { getSession as getAuthSession } from "next-auth/react";
 import { useSessionState } from "@/lib/useSessionState";
 import {
   getPaymentProviderMeta,
@@ -211,6 +212,34 @@ export default function SessionDetailsPage() {
       setSaving(false);
     }
   };
+
+  useEffect(() => {
+    if (!hostName && session?.hostName) {
+      setHostName(session.hostName);
+      return;
+    }
+
+    if (hostName.trim()) {
+      return;
+    }
+
+    let isActive = true;
+
+    async function loadHostName() {
+      const authSession = await getAuthSession();
+      const nextName = authSession?.user?.name?.trim();
+
+      if (isActive && nextName) {
+        setHostName(nextName);
+      }
+    }
+
+    loadHostName();
+
+    return () => {
+      isActive = false;
+    };
+  }, [hostName, session?.hostName]);
 
   if (status === "loading") {
     return (

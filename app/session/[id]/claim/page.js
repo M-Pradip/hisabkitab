@@ -156,6 +156,12 @@ export default function ClaimPage() {
   };
 
   const goToResults = () => {
+    updateSession({
+      type: "save_history_snapshot",
+    }).catch(() => {
+      // Saving history is best-effort; the split summary should still open.
+    });
+
     setScreen("split");
   };
 

@@ -1,0 +1,196 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum PaymentProvider {
+  ESEWA
+  KHALTI
+  BANK_QR
+  OTHER
+}
+
+enum ExpenseSessionStatus {
+  OPEN
+  CLOSED
+}
+
+enum BillSplitHistoryStatus {
+  SAVED
+  CLOSED
+}
+
+enum ParticipantPaymentStatus {
+  PAID
+  UNPAID
+}
+
+enum ReminderProvider {
+  DEMO
+  SMS
+  WHATSAPP
+}
+
+enum ReminderStatus {
+  SENT
+  FAILED
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  emailVerified DateTime?
+  image         String?
+  passwordHash  String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  hostProfile        HostProfile?
+  hostSessions       ExpenseSession[]   @relation("HostExpenseSessions")
+  reminderLogs       ReminderLog[]      @relation("HostReminderLogs")
+  accounts           Account[]
+  sessions           Session[]
+  billSplitHistories BillSplitHistory[]
+}
+
+model HostProfile {
+  id                     String          @id @default(cuid())
+  userId                 String          @unique
+  fullName               String
+  paymentProvider        PaymentProvider @default(ESEWA)
+  phoneNumber            String?
+  premiumStatus          Boolean         @default(false)
+  paymentQrImageData     Bytes?
+  paymentQrImageMimeType String?
+  paymentQrImageName     String?
+  createdAt              DateTime        @default(now())
+  updatedAt              DateTime        @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model ExpenseSession {
+  id          String               @id @default(cuid())
+  title       String
+  description String?
+  hostId      String
+  totalAmount Decimal              @db.Decimal(12, 2)
+  currency    String               @default("NPR")
+  status      ExpenseSessionStatus @default(OPEN)
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+
+  host         User          @relation("HostExpenseSessions", fields: [hostId], references: [id], onDelete: Cascade)
+  participants Participant[]
+  reminderLogs ReminderLog[]
+
+  @@index([hostId, status])
+}
+
+model Participant {
+  id               String                   @id @default(cuid())
+  sessionId        String
+  name             String
+  phoneNumber      String?
+  shareAmount      Decimal                  @db.Decimal(12, 2)
+  paymentStatus    ParticipantPaymentStatus @default(UNPAID)
+  paidAt           DateTime?
+  reminderCount    Int                      @default(0)
+  lastReminderSent DateTime?
+  createdAt        DateTime                 @default(now())
+  updatedAt        DateTime                 @updatedAt
+
+  session      ExpenseSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  reminderLogs ReminderLog[]
+
+  @@index([sessionId, paymentStatus])
+}
+
+model ReminderLog {
+  id            String           @id @default(cuid())
+  sessionId     String
+  participantId String
+  hostId        String
+  provider      ReminderProvider
+  status        ReminderStatus
+  message       String
+  createdAt     DateTime         @default(now())
+
+  session     ExpenseSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  participant Participant    @relation(fields: [participantId], references: [id], onDelete: Cascade)
+  host        User           @relation("HostReminderLogs", fields: [hostId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId, participantId, createdAt])
+  @@index([hostId, createdAt])
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model StoredSession {
+  id        String   @id
+  session   Json
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @default(now()) @map("updated_at") @db.Timestamptz(6)
+
+  @@map("sessions")
+}
+
+model BillSplitHistory {
+  id              String                 @id @default(cuid())
+  sourceSessionId String                 @unique
+  hostId          String
+  hostName        String
+  title           String
+  currency        String                 @default("NPR")
+  totalAmount     Decimal                @db.Decimal(12, 2)
+  status          BillSplitHistoryStatus @default(SAVED)
+  summary         Json
+  createdAt       DateTime               @default(now())
+  updatedAt       DateTime               @updatedAt
+
+  host User @relation(fields: [hostId], references: [id], onDelete: Cascade)
+
+  @@index([hostId, createdAt])
+  @@index([updatedAt])
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}

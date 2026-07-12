@@ -136,14 +136,14 @@ export default function ItemList({
                 </button>
 
                 {editable && isActive ? (
-                  <div className="mt-3 grid gap-3 sm:grid-cols-[minmax(0,1fr)_88px_120px]">
+                  <div className="mt-3 grid gap-3 sm:grid-cols-[minmax(0,1.7fr)_88px_120px]">
                     <input
                       type="text"
                       value={draftItem.name}
                       onChange={(event) =>
                         updateDraftItem(item.id, { name: event.target.value })
                       }
-                      className="h-[48px] min-w-0 rounded-[14px] border border-[#e6e1de] bg-[#faf8f7] px-4 text-[15px] outline-none"
+                      className="h-[54px] min-w-0 rounded-[14px] border border-[#e6e1de] bg-[#faf8f7] px-5 text-[17px] outline-none sm:col-span-1 sm:text-[18px]"
                       placeholder="Item name"
                     />
                     <input
