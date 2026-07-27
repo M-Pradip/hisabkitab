@@ -122,6 +122,19 @@ export async function getSplitBillHistoryById(historyId: string, hostId: string)
         id: historyId,
         hostId,
       },
+      select: {
+        id: true,
+        sourceSessionId: true,
+        hostId: true,
+        hostName: true,
+        title: true,
+        currency: true,
+        totalAmount: true,
+        status: true,
+        summary: true,
+        createdAt: true,
+        updatedAt: true,
+      },
     });
   } catch (error) {
     if (isMissingBillSplitHistoryTableError(error)) {

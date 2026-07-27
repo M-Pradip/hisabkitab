@@ -6,9 +6,10 @@ import { getExpenseSessionById } from "@/lib/queries/sessions";
 import {
   getParticipantById,
   incrementParticipantReminder,
+  updateParticipantEmail,
 } from "@/lib/queries/participants";
-import { getLatestReminderForParticipant } from "@/lib/queries/reminders";
 import { createNotificationService } from "@/services/notification";
+import { sendResendEmail } from "@/services/notification/resend-email";
 
 function formatBillSummary({
   totalAmount,
@@ -34,9 +35,11 @@ function formatBillSummary({
 export async function sendSessionReminder({
   sessionId,
   participantId,
+  email,
 }: {
   sessionId: string;
   participantId: string;
+  email?: string | null;
 }) {
   const session = await auth();
 
@@ -68,11 +71,27 @@ export async function sendSessionReminder({
     throw new Error("Participant not found for this session.");
   }
 
-  const latestReminder = await getLatestReminderForParticipant(participantId);
-  if (latestReminder) {
-    const elapsed = Date.now() - latestReminder.createdAt.getTime();
-    if (elapsed < 10 * 60 * 1000) {
-      throw new Error("A reminder was already sent in the last 10 minutes.");
+  const recipientEmail = (email ?? participant.email ?? "").trim().toLowerCase();
+
+  if (!recipientEmail) {
+    throw new Error("Please add the participant email before sending.");
+  }
+
+  if (email && recipientEmail !== participant.email) {
+    await updateParticipantEmail({
+      participantId: participant.id,
+      email: recipientEmail,
+    });
+  }
+
+  if (participant.reminderCount >= 5) {
+    throw new Error("This participant has already received 5 notifications.");
+  }
+
+  if (participant.lastReminderSent) {
+    const elapsed = Date.now() - participant.lastReminderSent.getTime();
+    if (elapsed < 24 * 60 * 60 * 1000) {
+      throw new Error("This participant can only receive one notification per day.");
     }
   }
 
@@ -96,6 +115,7 @@ export async function sendSessionReminder({
     sessionId: expenseSession.id,
     participantId: participant.id,
     participantName: participant.name,
+    participantEmail: recipientEmail,
     sessionTitle: expenseSession.title,
     shareAmount: String(participant.shareAmount),
     billSummary,
@@ -114,4 +134,32 @@ export async function sendSessionReminder({
     status: result.status,
     qrImageAvailable: Boolean(hostProfile?.paymentQrImageData),
   };
+}
+
+export async function sendArchivedSessionReminder({
+  participantEmail,
+  participantName,
+  sessionTitle,
+  shareAmount,
+  billSummary,
+}: {
+  participantEmail: string;
+  participantName: string;
+  sessionTitle: string;
+  shareAmount: string;
+  billSummary: string;
+}) {
+  const recipientEmail = participantEmail.trim().toLowerCase();
+
+  if (!recipientEmail) {
+    throw new Error("Please add the participant email before sending.");
+  }
+
+  return sendResendEmail({
+    participantEmail: recipientEmail,
+    participantName,
+    sessionTitle,
+    shareAmount,
+    billSummary,
+  });
 }

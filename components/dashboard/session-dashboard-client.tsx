@@ -1,20 +1,19 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 
 import { setParticipantPaymentStatusAction } from "@/actions/session";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Modal } from "@/components/ui/modal";
 import { useToast } from "@/hooks/use-toast";
-import { buildReminderMessage } from "@/utils/reminder-message";
 import { formatMoney, formatPhoneNumber, formatRelativeTime, getInitials } from "@/utils/format";
 
 type ParticipantRow = {
   id: string;
   name: string;
+  email: string | null;
   phoneNumber: string | null;
   shareAmount: string;
   paymentStatus: "PAID" | "UNPAID";
@@ -60,9 +59,7 @@ export function SessionDashboardClient({
   const router = useRouter();
   const { toast } = useToast();
   const [search, setSearch] = useState("");
-  const [selectedParticipant, setSelectedParticipant] =
-    useState<ParticipantRow | null>(null);
-  const [sending, setSending] = useState(false);
+  const [sendingParticipantId, setSendingParticipantId] = useState<string | null>(null);
 
   const filteredParticipants = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -74,19 +71,11 @@ export function SessionDashboardClient({
     return participants.filter((participant) => {
       return (
         participant.name.toLowerCase().includes(query) ||
+        participant.email?.toLowerCase().includes(query) ||
         participant.phoneNumber?.toLowerCase().includes(query)
       );
     });
   }, [participants, search]);
-
-  const billSummary = useMemo(() => {
-    return [
-      `Total: ${currency} ${totalAmount}`,
-      `Members: ${participantCount}`,
-      `Paid: ${paidCount}`,
-      `Unpaid: ${unpaidCount}`,
-    ].join(" | ");
-  }, [currency, totalAmount, participantCount, paidCount, unpaidCount]);
 
   const outstandingBalance = useMemo(() => {
     const total = filteredParticipants.reduce((sum, participant) => {
@@ -108,12 +97,25 @@ export function SessionDashboardClient({
     return formatMoney(total, currency);
   }, [currency, filteredParticipants]);
 
-  async function sendReminder() {
-    if (!selectedParticipant) {
+  async function sendReminder(
+    event: FormEvent<HTMLFormElement>,
+    participant: ParticipantRow,
+  ) {
+    event.preventDefault();
+
+    const formData = new FormData(event.currentTarget);
+    const email = String(formData.get("email") ?? "").trim();
+
+    if (!email) {
+      toast({
+        title: "Email required",
+        description: "Please enter the participant email before sending.",
+        variant: "error",
+      });
       return;
     }
 
-    setSending(true);
+    setSendingParticipantId(participant.id);
 
     try {
       const response = await fetch("/api/reminders/send", {
@@ -123,7 +125,8 @@ export function SessionDashboardClient({
         },
         body: JSON.stringify({
           sessionId,
-          participantId: selectedParticipant.id,
+          participantId: participant.id,
+          email,
         }),
       });
 
@@ -134,22 +137,21 @@ export function SessionDashboardClient({
       }
 
       toast({
-        title: "Reminder queued",
+        title: "Notification sent",
         description: data.message,
         variant: "success",
       });
 
-      setSelectedParticipant(null);
       router.refresh();
     } catch (error) {
       toast({
-        title: "Reminder failed",
+        title: "Notification failed",
         description:
           error instanceof Error ? error.message : "Failed to send reminder.",
         variant: "error",
       });
     } finally {
-      setSending(false);
+      setSendingParticipantId(null);
     }
   }
 
@@ -157,11 +159,7 @@ export function SessionDashboardClient({
     <div className="space-y-8">
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <StatCard label="Total Members" value={participantCount} />
-        <StatCard
-          label="Paid Members"
-          value={paidCount}
-          tone="emerald"
-        />
+        <StatCard label="Paid Members" value={paidCount} tone="emerald" />
         <StatCard label="Unpaid Members" value={unpaidCount} tone="amber" />
         <StatCard
           label="Outstanding Balance"
@@ -171,11 +169,7 @@ export function SessionDashboardClient({
       </section>
 
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <StatCard
-          label="Collected Amount"
-          value={collectedAmount}
-          tone="sky"
-        />
+        <StatCard label="Collected Amount" value={collectedAmount} tone="sky" />
         <StatCard
           label="Reminder Sent"
           value={participants.filter((participant) => participant.reminderCount > 0).length}
@@ -197,20 +191,20 @@ export function SessionDashboardClient({
                 Participants
               </h2>
               <p className="mt-1 text-sm text-slate-600">
-                Search, mark payment, and send reminders from a single place.
+                Search, mark payment, and send email reminders from a single place.
               </p>
             </div>
             <div className="w-full max-w-sm">
               <Input
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
-                placeholder="Search by name or phone"
+                placeholder="Search by name, email, or phone"
               />
             </div>
           </div>
 
           <div className="mt-6 overflow-hidden rounded-[24px] border border-slate-200">
-            <div className="grid grid-cols-[1.2fr_0.9fr_0.7fr_0.8fr_0.8fr_1.2fr] gap-3 border-b border-slate-200 bg-slate-50 px-4 py-3 text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
+            <div className="grid grid-cols-[1.2fr_0.9fr_0.7fr_0.8fr_0.8fr_1.3fr] gap-3 border-b border-slate-200 bg-slate-50 px-4 py-3 text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
               <div>Participant</div>
               <div>Phone</div>
               <div>Amount Due</div>
@@ -220,82 +214,117 @@ export function SessionDashboardClient({
             </div>
 
             <div className="divide-y divide-slate-100 bg-white">
-              {filteredParticipants.map((participant) => (
-                <div
-                  key={participant.id}
-                  className="grid grid-cols-[1.2fr_0.9fr_0.7fr_0.8fr_0.8fr_1.2fr] items-center gap-3 px-4 py-4"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-950 text-sm font-semibold text-white">
-                      {getInitials(participant.name)}
+              {filteredParticipants.map((participant) => {
+                const reminderDisabled =
+                  participant.reminderCount >= 5 ||
+                  sendingParticipantId === participant.id;
+
+                return (
+                  <div
+                    key={participant.id}
+                    className="grid grid-cols-[1.2fr_0.9fr_0.7fr_0.8fr_0.8fr_1.3fr] items-start gap-3 px-4 py-4"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-950 text-sm font-semibold text-white">
+                        {getInitials(participant.name)}
+                      </div>
+                      <div>
+                        <div className="font-medium text-slate-900">
+                          {participant.name}
+                        </div>
+                        <div className="text-xs text-slate-500">
+                          {participant.email || "No email saved"}
+                        </div>
+                        <div className="text-xs text-slate-500">
+                          {participant.paidAt
+                            ? `Paid ${formatRelativeTime(participant.paidAt)}`
+                            : "Awaiting payment"}
+                        </div>
+                      </div>
                     </div>
+
+                    <div className="text-sm text-slate-700">
+                      {formatPhoneNumber(participant.phoneNumber)}
+                    </div>
+
+                    <div className="text-sm font-semibold text-slate-900">
+                      {formatMoney(participant.shareAmount, currency)}
+                    </div>
+
                     <div>
-                      <div className="font-medium text-slate-900">
-                        {participant.name}
+                      <Badge
+                        className={
+                          participant.paymentStatus === "PAID"
+                            ? "bg-emerald-100 text-emerald-900"
+                            : "bg-amber-100 text-amber-900"
+                        }
+                      >
+                        {participant.paymentStatus === "PAID" ? "Paid" : "Unpaid"}
+                      </Badge>
+                    </div>
+
+                    <div className="text-sm text-slate-700">
+                      {participant.reminderCount}/5
+                      <div className="text-xs text-slate-500">
+                        {participant.reminderCount === 1 ? "notification" : "notifications"}
                       </div>
                       <div className="text-xs text-slate-500">
-                        {participant.paidAt ? `Paid ${formatRelativeTime(participant.paidAt)}` : "Awaiting payment"}
+                        {formatRelativeTime(participant.lastReminderSent)}
                       </div>
                     </div>
-                  </div>
 
-                  <div className="text-sm text-slate-700">
-                    {formatPhoneNumber(participant.phoneNumber)}
-                  </div>
+                    <div className="space-y-3">
+                      <form
+                        className="space-y-2"
+                        onSubmit={(event) => sendReminder(event, participant)}
+                      >
+                        <Input
+                          name="email"
+                          type="email"
+                          defaultValue={participant.email ?? ""}
+                          placeholder="Participant email"
+                          className="h-10 text-sm"
+                        />
+                        <Button
+                          type="submit"
+                          className="w-full px-3 py-2 text-xs"
+                          isLoading={sendingParticipantId === participant.id}
+                          disabled={reminderDisabled}
+                        >
+                          {participant.reminderCount >= 5
+                            ? "Limit reached"
+                            : "Send Notification"}
+                        </Button>
+                      </form>
 
-                  <div className="text-sm font-semibold text-slate-900">
-                    {formatMoney(participant.shareAmount, currency)}
-                  </div>
+                      <div className="flex flex-wrap gap-2">
+                        <form action={setParticipantPaymentStatusAction}>
+                          <input type="hidden" name="sessionId" value={sessionId} />
+                          <input type="hidden" name="participantId" value={participant.id} />
+                          <input type="hidden" name="paymentStatus" value="PAID" />
+                          <Button type="submit" variant="secondary" className="px-3 py-2 text-xs">
+                            Mark Paid
+                          </Button>
+                        </form>
+                        <form action={setParticipantPaymentStatusAction}>
+                          <input type="hidden" name="sessionId" value={sessionId} />
+                          <input type="hidden" name="participantId" value={participant.id} />
+                          <input type="hidden" name="paymentStatus" value="UNPAID" />
+                          <Button type="submit" variant="secondary" className="px-3 py-2 text-xs">
+                            Mark Unpaid
+                          </Button>
+                        </form>
+                      </div>
 
-                  <div>
-                    <Badge
-                      className={
-                        participant.paymentStatus === "PAID"
-                          ? "bg-emerald-100 text-emerald-900"
-                          : "bg-amber-100 text-amber-900"
-                      }
-                    >
-                      {participant.paymentStatus === "PAID" ? "Paid" : "Unpaid"}
-                    </Badge>
-                  </div>
-
-                  <div className="text-sm text-slate-700">
-                    {participant.reminderCount}{" "}
-                    <span className="text-slate-500">
-                      {participant.reminderCount === 1 ? "reminder" : "reminders"}
-                    </span>
-                    <div className="text-xs text-slate-500">
-                      {formatRelativeTime(participant.lastReminderSent)}
+                      {participant.reminderCount >= 5 ? (
+                        <p className="text-xs text-rose-600">
+                          Notification limit reached for this participant.
+                        </p>
+                      ) : null}
                     </div>
                   </div>
-
-                  <div className="flex flex-wrap gap-2">
-                    <form action={setParticipantPaymentStatusAction}>
-                      <input type="hidden" name="sessionId" value={sessionId} />
-                      <input type="hidden" name="participantId" value={participant.id} />
-                      <input type="hidden" name="paymentStatus" value="PAID" />
-                      <Button type="submit" variant="secondary" className="px-3 py-2 text-xs">
-                        Mark Paid
-                      </Button>
-                    </form>
-                    <form action={setParticipantPaymentStatusAction}>
-                      <input type="hidden" name="sessionId" value={sessionId} />
-                      <input type="hidden" name="participantId" value={participant.id} />
-                      <input type="hidden" name="paymentStatus" value="UNPAID" />
-                      <Button type="submit" variant="secondary" className="px-3 py-2 text-xs">
-                        Mark Unpaid
-                      </Button>
-                    </form>
-                    <Button
-                      type="button"
-                      className="px-3 py-2 text-xs"
-                      onClick={() => setSelectedParticipant(participant)}
-                    >
-                      Send Reminder
-                    </Button>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
 
               {filteredParticipants.length === 0 ? (
                 <div className="px-4 py-8 text-center text-sm text-slate-500">
@@ -344,71 +373,11 @@ export function SessionDashboardClient({
               </p>
             ) : null}
             <div className="mt-4 text-sm text-slate-200">
-              Outstanding reminder preview will show the payment QR before send.
+              Email reminders are sent through Resend and limited to one per day, up to five total per participant.
             </div>
           </div>
         </div>
       </section>
-
-      <Modal
-        open={Boolean(selectedParticipant)}
-        title={
-          selectedParticipant
-            ? `Send reminder to ${selectedParticipant.name}`
-            : "Send reminder"
-        }
-        description="Review the reminder message and QR preview before confirming."
-        onClose={() => setSelectedParticipant(null)}
-        footer={
-          <>
-            <Button type="button" variant="secondary" onClick={() => setSelectedParticipant(null)}>
-              Cancel
-            </Button>
-            <Button type="button" onClick={sendReminder} isLoading={sending}>
-              Confirm send
-            </Button>
-          </>
-        }
-      >
-        {selectedParticipant ? (
-          <div className="grid gap-6 lg:grid-cols-[0.95fr_1.05fr]">
-            <div className="space-y-4">
-              <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
-                <div className="text-xs uppercase tracking-[0.16em] text-slate-500">
-                  Preview
-                </div>
-                <pre className="mt-3 whitespace-pre-wrap text-sm leading-6 text-slate-700">
-                  {buildReminderMessage({
-                    participantName: selectedParticipant.name,
-                    sessionTitle,
-                    shareAmount: selectedParticipant.shareAmount,
-                    billSummary,
-                  })}
-                </pre>
-              </div>
-            </div>
-
-            <div className="space-y-4">
-              <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
-                <div className="text-xs uppercase tracking-[0.16em] text-slate-500">
-                  Payment QR
-                </div>
-                {qrImageAvailable ? (
-                  <img
-                    src="/api/host/profile/qr"
-                    alt="Host payment QR"
-                    className="mt-3 aspect-square w-full rounded-3xl border border-slate-200 bg-white object-contain p-3"
-                  />
-                ) : (
-                  <div className="mt-3 flex aspect-square w-full items-center justify-center rounded-3xl border border-dashed border-slate-200 bg-white text-sm text-slate-500">
-                    No QR image available
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        ) : null}
-      </Modal>
     </div>
   );
 }

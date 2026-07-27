@@ -37,8 +37,9 @@ export function AddParticipantForm({ sessionId }: { sessionId: string }) {
   return (
     <form action={action} className="space-y-4 rounded-3xl border border-slate-200 bg-white p-4">
       <input type="hidden" name="sessionId" value={sessionId} />
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-4">
         <Input name="name" placeholder="Participant name" required />
+        <Input name="email" type="email" placeholder="Email (optional)" />
         <Input name="phoneNumber" placeholder="Phone number" />
         <Input
           name="shareAmount"

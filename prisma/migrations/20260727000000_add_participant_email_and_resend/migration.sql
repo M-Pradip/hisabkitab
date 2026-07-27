@@ -1,0 +1,4 @@
+ALTER TYPE "ReminderProvider" ADD VALUE IF NOT EXISTS 'RESEND';
+
+ALTER TABLE "Participant"
+ADD COLUMN IF NOT EXISTS "email" TEXT;

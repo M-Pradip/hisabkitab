@@ -103,7 +103,10 @@ export function HomeLanding({ isSignedIn }: { isSignedIn: boolean }) {
       <div className="mx-auto mb-4 flex w-full max-w-[430px] items-center justify-between rounded-[18px] bg-white/85 px-4 py-3 text-sm font-semibold shadow-[0_10px_30px_rgba(0,0,0,0.06)] backdrop-blur">
         <span className="text-[#2d2b84]">Hisab Kitab</span>
         <div className="flex items-center gap-3 text-[#595a7b]">
-          <Link href={isSignedIn ? "/dashboard" : "/login"} className="hover:text-[#2d2b84]">
+          <Link
+            href={isSignedIn ? "/dashboard" : "/login"}
+            className="hover:text-[#2d2b84]"
+          >
             {isSignedIn ? "Dashboard" : "Login"}
           </Link>
         </div>
@@ -117,9 +120,9 @@ export function HomeLanding({ isSignedIn }: { isSignedIn: boolean }) {
           </p>
 
           <h1 className="mb-5 text-[1.9rem] font-extrabold leading-[1.1] text-[#171739] md:text-[3rem]">
-            Split the bill,
+            Go together
             <br />
-            not the friendship.
+            Pay seperately
           </h1>
 
           <p className="mb-[30px] text-[1rem] leading-[1.8] text-[#595a7b] md:text-[1.1rem]">

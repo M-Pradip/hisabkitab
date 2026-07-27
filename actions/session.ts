@@ -29,6 +29,7 @@ export async function addParticipantAction(
 
   const sessionId = String(formData.get("sessionId") ?? "");
   const name = String(formData.get("name") ?? "").trim();
+  const email = String(formData.get("email") ?? "").trim().toLowerCase();
   const phoneNumber = String(formData.get("phoneNumber") ?? "").trim();
   const shareAmount = Number(formData.get("shareAmount"));
 
@@ -45,6 +46,7 @@ export async function addParticipantAction(
   await createParticipant({
     sessionId,
     name,
+    email: email || null,
     phoneNumber: phoneNumber || null,
     shareAmount,
   });

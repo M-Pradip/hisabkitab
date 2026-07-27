@@ -50,8 +50,25 @@ export const participantStatusSchema = z.object({
 });
 
 export const reminderRequestSchema = z.object({
-  sessionId: z.string().trim().min(1, "Session is required."),
-  participantId: z.string().trim().min(1, "Participant is required."),
+  sessionId: z.string().trim().optional(),
+  participantId: z.string().trim().optional(),
+  participantName: z.string().trim().optional(),
+  sessionTitle: z.string().trim().optional(),
+  shareAmount: z.string().trim().optional(),
+  billSummary: z.string().trim().optional(),
+  email: z
+    .union([
+      z.string().trim().email("Please enter a valid email address."),
+      z.literal(""),
+    ])
+    .optional()
+    .transform((value) => {
+      if (!value) {
+        return undefined;
+      }
+
+      return value.trim().toLowerCase();
+    }),
 });
 
 export const sessionParamSchema = z.object({

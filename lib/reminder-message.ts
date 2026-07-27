@@ -1,1 +1,4 @@
-export { buildReminderMessage } from "@/utils/reminder-message";
+export {
+  buildReminderEmailTemplate,
+  buildReminderMessage,
+} from "@/utils/reminder-message";

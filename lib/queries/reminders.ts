@@ -20,7 +20,7 @@ export async function createReminderLog({
   sessionId: string;
   participantId: string;
   hostId: string;
-  provider: "DEMO" | "SMS" | "WHATSAPP";
+  provider: "DEMO" | "SMS" | "WHATSAPP" | "RESEND";
   status: "SENT" | "FAILED";
   message: string;
 }) {

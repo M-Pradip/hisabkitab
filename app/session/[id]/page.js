@@ -3,7 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useParams, useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { startTransition, useEffect, useRef, useState } from "react";
 import { getSession as getAuthSession } from "next-auth/react";
 import { useSessionState } from "@/lib/useSessionState";
 import {
@@ -215,7 +215,9 @@ export default function SessionDetailsPage() {
 
   useEffect(() => {
     if (!hostName && session?.hostName) {
-      setHostName(session.hostName);
+      startTransition(() => {
+        setHostName(session.hostName);
+      });
       return;
     }
 
@@ -230,7 +232,9 @@ export default function SessionDetailsPage() {
       const nextName = authSession?.user?.name?.trim();
 
       if (isActive && nextName) {
-        setHostName(nextName);
+        startTransition(() => {
+          setHostName(nextName);
+        });
       }
     }
 

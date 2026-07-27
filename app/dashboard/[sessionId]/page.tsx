@@ -3,10 +3,12 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 
 import { BrandMark } from "@/components/brand-mark";
+import { ParticipantSharesClient } from "@/components/dashboard/participant-shares-client";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { auth } from "@/lib/auth";
 import { getSplitBillHistoryById } from "@/lib/queries/session-history";
+import { getExpenseSessionById } from "@/lib/queries/sessions";
 import { formatMoney, formatRelativeTime } from "@/utils/format";
 
 export default async function SessionDetailPage({
@@ -26,6 +28,10 @@ export default async function SessionDetailPage({
   if (!history) {
     notFound();
   }
+
+  const liveSession = history.sourceSessionId
+    ? await getExpenseSessionById(history.sourceSessionId, session.user.id)
+    : null;
 
   const snapshot = history.summary as {
     session?: {
@@ -90,6 +96,11 @@ export default async function SessionDetailPage({
     snapshot.metadata?.participantCount ?? sessionData.participants?.length ?? 0;
   const itemCount = snapshot.metadata?.itemCount ?? sessionData.items?.length ?? 0;
   const grandTotal = totals.grandTotal ?? Number(history.totalAmount);
+  const billSummary = [
+    `Total: ${history.currency} ${grandTotal.toFixed(2)}`,
+    `Members: ${participantCount}`,
+    `Items: ${itemCount}`,
+  ].join(" | ");
 
   return (
     <main className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(15,23,42,0.08),_transparent_40%),linear-gradient(180deg,_#f8fafc_0%,_#eef2ff_100%)] px-4 py-8">
@@ -179,47 +190,38 @@ export default async function SessionDetailPage({
               <div className="text-sm font-semibold uppercase tracking-[0.16em] text-slate-500">
                 Participant shares
               </div>
-              <div className="mt-4 space-y-3">
-                {(totals.participantTotals || []).map((participant) => (
-                  <div
-                    key={participant.id}
-                    className="rounded-[20px] border border-slate-200 bg-slate-50 p-4"
-                  >
-                    <div className="flex flex-wrap items-center justify-between gap-3">
-                      <div>
-                        <div className="text-base font-semibold text-slate-950">
-                          {participant.name}
-                          {participant.role === "host" ? (
-                            <span className="ml-2 rounded-full bg-emerald-100 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-emerald-900">
-                              Host
-                            </span>
-                          ) : null}
-                        </div>
-                        <div className="mt-1 text-sm text-slate-600">
-                          {participant.items.length
-                            ? `${participant.items.length} assigned item${participant.items.length === 1 ? "" : "s"}`
-                            : "No assigned items"}
-                        </div>
-                      </div>
-                      <div className="text-lg font-semibold text-slate-950">
-                        {formatMoney(participant.total, history.currency)}
-                      </div>
-                    </div>
-
-                    {participant.items.length ? (
-                      <div className="mt-3 flex flex-wrap gap-2">
-                        {participant.items.map((item) => (
-                          <span
-                            key={`${participant.id}-${item.id}`}
-                            className="rounded-full bg-white px-3 py-1 text-xs text-slate-700"
-                          >
-                            {item.name}
-                          </span>
-                        ))}
-                      </div>
-                    ) : null}
-                  </div>
-                ))}
+              <div className="mt-4">
+                <ParticipantSharesClient
+                  sessionId={liveSession?.id || history.sourceSessionId || history.id}
+                  currency={history.currency}
+                  sessionTitle={title}
+                  billSummary={billSummary}
+                  participantTotals={(totals.participantTotals || []).map(
+                    (participant) => ({
+                      id: participant.id,
+                      name: participant.name,
+                      role: participant.role,
+                      total: participant.total,
+                      items: participant.items.map((item) => ({
+                        id: item.id,
+                        name: item.name,
+                      })),
+                    }),
+                  )}
+                  liveParticipants={
+                    liveSession
+                      ? liveSession.participants.map((participant) => ({
+                          id: participant.id,
+                          email: participant.email ?? null,
+                          paymentStatus: participant.paymentStatus,
+                          reminderCount: participant.reminderCount,
+                          lastReminderSent:
+                            participant.lastReminderSent?.toISOString() ?? null,
+                          paidAt: participant.paidAt?.toISOString() ?? null,
+                        }))
+                      : []
+                  }
+                />
               </div>
             </div>
           </Card>
@@ -301,6 +303,7 @@ export default async function SessionDetailPage({
             </Card>
           </div>
         </div>
+
       </div>
     </main>
   );

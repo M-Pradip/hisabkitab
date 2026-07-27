@@ -32,6 +32,7 @@ enum ReminderProvider {
   DEMO
   SMS
   WHATSAPP
+  RESEND
 }
 
 enum ReminderStatus {
@@ -95,6 +96,7 @@ model Participant {
   id               String                   @id @default(cuid())
   sessionId        String
   name             String
+  email            String?
   phoneNumber      String?
   shareAmount      Decimal                  @db.Decimal(12, 2)
   paymentStatus    ParticipantPaymentStatus @default(UNPAID)
