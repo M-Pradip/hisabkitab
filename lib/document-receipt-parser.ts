@@ -116,7 +116,9 @@ function parsePrice(value: string) {
 }
 
 function parseQuantity(value: string) {
-  const directMatch = value.match(/\b(?:x|qty|quantity)\s*[:\-]?\s*(\d{1,3})\b/i);
+  const directMatch = value.match(
+    /\b(?:x|qty|quantity)\s*[:\-]?\s*(\d{1,3})\b/i,
+  );
   if (directMatch) {
     const quantity = Number(directMatch[1]);
     return Number.isFinite(quantity) && quantity > 0 ? quantity : null;
@@ -189,7 +191,9 @@ function parseReceiptLine(line: string) {
 
     const rawName = normalize(match.groups.name);
     const price = match.groups.price ? parsePrice(match.groups.price) : null;
-    const quantity = match.groups.qty ? Number(match.groups.qty) : parseQuantity(cleaned);
+    const quantity = match.groups.qty
+      ? Number(match.groups.qty)
+      : parseQuantity(cleaned);
     const normalizedName = normalizeItemName(rawName);
     const resolvedQuantity =
       Number.isFinite(quantity as number) && (quantity as number) > 0
@@ -252,7 +256,10 @@ function extractTableCandidates(result: AzureAnalyzeResult) {
   const candidates: DocumentScanItem[] = [];
 
   for (const table of result.tables || []) {
-    const cellsByRow = new Map<number, Array<{ columnIndex?: number; content?: string }>>();
+    const cellsByRow = new Map<
+      number,
+      Array<{ columnIndex?: number; content?: string }>
+    >();
 
     for (const cell of table?.cells || []) {
       const rowIndex = Number(cell?.rowIndex ?? -1);
@@ -268,11 +275,15 @@ function extractTableCandidates(result: AzureAnalyzeResult) {
 
     for (const cells of cellsByRow.values()) {
       const sorted = [...cells].sort(
-        (left, right) => Number(left?.columnIndex ?? 0) - Number(right?.columnIndex ?? 0),
+        (left, right) =>
+          Number(left?.columnIndex ?? 0) - Number(right?.columnIndex ?? 0),
       );
 
       const rowText = normalize(
-        sorted.map((cell) => text(cell?.content)).filter(Boolean).join(" "),
+        sorted
+          .map((cell) => text(cell?.content))
+          .filter(Boolean)
+          .join(" "),
       );
 
       if (!rowText || hasNoise(rowText)) {
@@ -328,7 +339,9 @@ function extractTableCandidates(result: AzureAnalyzeResult) {
   return candidates;
 }
 
-export function buildDocumentScanPages(result: AzureAnalyzeResult): DocumentScanPage[] {
+export function buildDocumentScanPages(
+  result: AzureAnalyzeResult,
+): DocumentScanPage[] {
   return (result.pages || []).map((page, index) => ({
     pageNumber: Number(page?.pageNumber || index + 1),
     width: page?.width,
@@ -343,7 +356,9 @@ export function buildDocumentScanPages(result: AzureAnalyzeResult): DocumentScan
   }));
 }
 
-export function buildDocumentScanTables(result: AzureAnalyzeResult): DocumentScanTable[] {
+export function buildDocumentScanTables(
+  result: AzureAnalyzeResult,
+): DocumentScanTable[] {
   return (result.tables || []).map((table, index) => ({
     index,
     rowCount: Number(table?.rowCount || 0),
@@ -362,8 +377,40 @@ export function extractDocumentText(result: AzureAnalyzeResult) {
   return normalize(text(result?.content));
 }
 
+function parseTaxAmount(value: string) {
+  const normalized = value.replace(/[^0-9.,-]/g, "").replace(/,/g, "");
+  const amount = Number(normalized);
+
+  return Number.isFinite(amount) && amount >= 0
+    ? Math.round(amount * 100) / 100
+    : null;
+}
+
+export function extractReceiptTax(textValue: string) {
+  const value = normalize(textValue);
+  const matches = [
+    ...value.matchAll(
+      /\b(vat|iva|gst|tax)\b[^\d\n]{0,12}(?:\d{1,2}(?:[.,]\d+)?\s*%\s*)?(?:rs\.?|npr\.?|रु\.?)?\s*([\d,]+(?:\.\d{1,2})?)/gi,
+    ),
+    ...value.matchAll(
+      /\b(vat|iva|gst|tax)\b[^\d\n]{0,12}(?:rs\.?|npr\.?|रु\.?)?\s*([\d,]+(?:\.\d{1,2})?)\s*\([^)]*%[^)]*\)/gi,
+    ),
+  ];
+
+  const match = matches[matches.length - 1];
+  const amount = match ? parseTaxAmount(match[2]) : null;
+
+  return {
+    amount: amount ?? 0,
+    label: amount !== null ? String(match?.[1] || "VAT").toUpperCase() : "",
+  };
+}
+
 export function extractSuggestedItems(result: AzureAnalyzeResult) {
-  const candidates = [...extractTableCandidates(result), ...extractLineItemCandidates(result)];
+  const candidates = [
+    ...extractTableCandidates(result),
+    ...extractLineItemCandidates(result),
+  ];
   const seen = new Set<string>();
   const items: DocumentScanItem[] = [];
 
@@ -380,4 +427,3 @@ export function extractSuggestedItems(result: AzureAnalyzeResult) {
 
   return items;
 }
-

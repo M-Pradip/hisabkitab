@@ -2,6 +2,7 @@ import {
   buildDocumentScanPages,
   buildDocumentScanTables,
   extractDocumentText,
+  extractReceiptTax,
   extractSuggestedItems,
 } from "@/lib/document-receipt-parser";
 import { analyzeReceiptWithGroq } from "@/lib/groq-receipt-parser";
@@ -279,7 +280,12 @@ export async function analyzeDocumentWithAzure(file: File) {
   const fallbackItems = extractSuggestedItems(
     analyzeResult as Parameters<typeof extractSuggestedItems>[0],
   );
-  const aiResult = await analyzeReceiptWithGroq(text, fallbackItems);
+  const fallbackTax = extractReceiptTax(text);
+  const aiResult = await analyzeReceiptWithGroq(
+    text,
+    fallbackItems,
+    fallbackTax,
+  );
 
   const result: DocumentScanResult = {
     success: true,

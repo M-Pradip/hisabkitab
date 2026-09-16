@@ -81,11 +81,16 @@ function normalizeItems(items: GroqReceiptResult["items"]): DocumentScanItem[] {
 export async function analyzeReceiptWithGroq(
   text: string,
   fallbackItems: DocumentScanItem[],
+  fallbackTax = { amount: 0, label: "" },
 ) {
   const apiKey = String(process.env.GROQ_API_KEY || "").trim();
 
   if (!apiKey || !text.trim()) {
-    return { items: fallbackItems, taxAmount: 0, taxLabel: "" };
+    return {
+      items: fallbackItems,
+      taxAmount: fallbackTax.amount,
+      taxLabel: fallbackTax.label,
+    };
   }
 
   let response: Response;
@@ -115,22 +120,34 @@ export async function analyzeReceiptWithGroq(
       }),
     });
   } catch {
-    return { items: fallbackItems, taxAmount: 0, taxLabel: "" };
+    return {
+      items: fallbackItems,
+      taxAmount: fallbackTax.amount,
+      taxLabel: fallbackTax.label,
+    };
   }
 
   if (!response.ok) {
-    return { items: fallbackItems, taxAmount: 0, taxLabel: "" };
+    return {
+      items: fallbackItems,
+      taxAmount: fallbackTax.amount,
+      taxLabel: fallbackTax.label,
+    };
   }
 
   const payload = await response.json();
   const content = payload?.choices?.[0]?.message?.content;
   const parsed = typeof content === "string" ? parseJson(content) : null;
   const items = normalizeItems(parsed?.items);
-  const taxAmount = money(parsed?.taxAmount) ?? 0;
+  const modelTaxAmount = money(parsed?.taxAmount);
+  const taxAmount =
+    modelTaxAmount && modelTaxAmount > 0 ? modelTaxAmount : fallbackTax.amount;
 
   return {
     items: items.length ? items : fallbackItems,
     taxAmount,
-    taxLabel: String(parsed?.taxLabel || (taxAmount ? "VAT" : "")).trim(),
+    taxLabel: String(
+      parsed?.taxLabel || fallbackTax.label || (taxAmount ? "VAT" : ""),
+    ).trim(),
   };
 }
