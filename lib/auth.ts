@@ -1,12 +1,13 @@
 import "server-only";
 
-import bcrypt from "bcrypt";
 import { PrismaAdapter } from "@auth/prisma-adapter";
-import GoogleProvider from "next-auth/providers/google";
-import CredentialsProvider from "next-auth/providers/credentials";
+import bcrypt from "bcrypt";
 import NextAuth, { getServerSession, type NextAuthOptions } from "next-auth";
+import CredentialsProvider from "next-auth/providers/credentials";
+import GoogleProvider from "next-auth/providers/google";
 
 import { prisma } from "@/lib/prisma";
+import { createUserWithPassword } from "@/lib/queries/users";
 import { loginSchema } from "@/lib/validators";
 
 const googleClientId =
@@ -50,7 +51,14 @@ export const authOptions: NextAuthOptions = {
         });
 
         if (!user) {
-          return null;
+          const passwordHash = await bcrypt.hash(parsed.data.password, 12);
+          const name = parsed.data.email.split("@")[0] || parsed.data.email;
+
+          return createUserWithPassword({
+            name,
+            email: parsed.data.email,
+            passwordHash,
+          });
         }
 
         if (!user.passwordHash) {

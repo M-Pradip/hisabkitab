@@ -1,6 +1,9 @@
 "use client";
 
-import type { DocumentScanItem, DocumentScanResult } from "@/types/document-intelligence";
+import type {
+  DocumentScanItem,
+  DocumentScanResult,
+} from "@/types/document-intelligence";
 import Image from "next/image";
 import { useEffect, useMemo, useRef, useState } from "react";
 
@@ -196,7 +199,9 @@ export default function DocumentScanner({
       return;
     }
 
-    const blob = new Blob([scanResult.text], { type: "text/plain;charset=utf-8" });
+    const blob = new Blob([scanResult.text], {
+      type: "text/plain;charset=utf-8",
+    });
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement("a");
     anchor.href = url;
@@ -373,7 +378,8 @@ export default function DocumentScanner({
                 Extracted OCR Results
               </h3>
               <p className="mt-1 text-[13px] text-[#6f6f86]">
-                The parsed items below can be imported into the items page and edited later.
+                The parsed items below can be imported into the items page and
+                edited later.
               </p>
             </div>
             <div className="flex gap-2">
@@ -437,10 +443,22 @@ export default function DocumentScanner({
                     ))
                   ) : (
                     <div className="rounded-[18px] border border-dashed border-[#e4e8f0] bg-white px-4 py-6 text-center text-[14px] text-[#6f6f86]">
-                      No line items were confidently detected. You can still review the text above.
+                      No line items were confidently detected. You can still
+                      review the text above.
                     </div>
                   )}
                 </div>
+                {scanResult.taxAmount > 0 ? (
+                  <div className="mt-4 rounded-[18px] border border-[#e4e8f0] bg-white px-4 py-3">
+                    <div className="text-[13px] font-semibold text-[#1a1f3c]">
+                      {scanResult.taxLabel || "VAT / Tax"}
+                    </div>
+                    <div className="mt-1 text-[13px] text-[#6f6f86]">
+                      Rs {Number(scanResult.taxAmount).toFixed(2)} · split
+                      equally across all participants
+                    </div>
+                  </div>
+                ) : null}
               </div>
             </div>
 
@@ -460,7 +478,8 @@ export default function DocumentScanner({
                       </summary>
                       <div className="mt-3 space-y-2 text-[13px] text-[#6f6f86]">
                         <div>
-                          {page.width ? `${page.width}` : "?"} x {page.height ? `${page.height}` : "?"}{" "}
+                          {page.width ? `${page.width}` : "?"} x{" "}
+                          {page.height ? `${page.height}` : "?"}{" "}
                           {page.unit || ""}
                         </div>
                         <div>{page.lines.length} lines</div>
@@ -471,7 +490,9 @@ export default function DocumentScanner({
                                 key={`${page.pageNumber}-${index}`}
                                 className="rounded-[14px] bg-[#fafafa] px-3 py-2"
                               >
-                                <div className="text-[#1a1f3c]">{line.text}</div>
+                                <div className="text-[#1a1f3c]">
+                                  {line.text}
+                                </div>
                                 {formatPercent(line.confidence) ? (
                                   <div className="mt-1 text-[11px] font-semibold text-[#243b84]">
                                     Confidence {formatPercent(line.confidence)}
@@ -504,25 +525,30 @@ export default function DocumentScanner({
                         <div className="mt-3 overflow-auto">
                           <table className="min-w-full border-separate border-spacing-0 text-left text-[13px]">
                             <tbody>
-                              {Array.from({ length: table.rowCount }).map((_, rowIndex) => (
-                                <tr key={rowIndex}>
-                                  {Array.from({ length: table.columnCount }).map((__, columnIndex) => {
-                                    const cell = table.cells.find(
-                                      (entry) =>
-                                        entry.rowIndex === rowIndex && entry.columnIndex === columnIndex,
-                                    );
+                              {Array.from({ length: table.rowCount }).map(
+                                (_, rowIndex) => (
+                                  <tr key={rowIndex}>
+                                    {Array.from({
+                                      length: table.columnCount,
+                                    }).map((__, columnIndex) => {
+                                      const cell = table.cells.find(
+                                        (entry) =>
+                                          entry.rowIndex === rowIndex &&
+                                          entry.columnIndex === columnIndex,
+                                      );
 
-                                    return (
-                                      <td
-                                        key={columnIndex}
-                                        className="border-b border-r border-[#eef1f6] px-3 py-2 align-top last:border-r-0"
-                                      >
-                                        {cell?.content || ""}
-                                      </td>
-                                    );
-                                  })}
-                                </tr>
-                              ))}
+                                      return (
+                                        <td
+                                          key={columnIndex}
+                                          className="border-b border-r border-[#eef1f6] px-3 py-2 align-top last:border-r-0"
+                                        >
+                                          {cell?.content || ""}
+                                        </td>
+                                      );
+                                    })}
+                                  </tr>
+                                ),
+                              )}
                             </tbody>
                           </table>
                         </div>

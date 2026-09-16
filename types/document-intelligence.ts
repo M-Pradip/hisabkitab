@@ -4,7 +4,7 @@ export type DocumentScanItem = {
   price: number;
   quantity?: number;
   confidence?: number;
-  source?: "line" | "table";
+  source?: "line" | "table" | "ai";
   rawText?: string;
 };
 
@@ -44,6 +44,8 @@ export type DocumentScanResult = {
   pages: DocumentScanPage[];
   tables: DocumentScanTable[];
   items: DocumentScanItem[];
+  taxAmount: number;
+  taxLabel: string;
   raw: unknown;
   fileName: string;
   fileType: string;
@@ -53,4 +55,3 @@ export type DocumentScanFailure = {
   success: false;
   error: string;
 };
-

@@ -1,7 +1,7 @@
 "use client";
 
-import SessionHeader from "@/components/SessionHeader";
 import ItemList from "@/components/ItemList";
+import SessionHeader from "@/components/SessionHeader";
 import { useSessionState } from "@/lib/useSessionState";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
@@ -18,6 +18,16 @@ export default function ItemsPage() {
   const [itemName, setItemName] = useState("");
   const [itemPrice, setItemPrice] = useState("");
   const [itemQuantity, setItemQuantity] = useState("1");
+  const [taxAmount, setTaxAmount] = useState("");
+  const [savingTax, setSavingTax] = useState(false);
+
+  useEffect(() => {
+    if (session) {
+      // The session arrives asynchronously and must populate the editable tax draft.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setTaxAmount(String(session.taxAmount ?? ""));
+    }
+  }, [session]);
 
   const shareUrl = useMemo(() => {
     if (typeof window === "undefined") {
@@ -109,6 +119,26 @@ export default function ItemsPage() {
     });
   };
 
+  const saveTax = async () => {
+    const amount = Number(taxAmount);
+
+    if (Number.isNaN(amount) || amount < 0) {
+      return;
+    }
+
+    setSavingTax(true);
+
+    try {
+      await updateSession({
+        type: "set_receipt_tax",
+        taxAmount: amount,
+        taxLabel: session?.taxLabel || "VAT / Tax",
+      });
+    } finally {
+      setSavingTax(false);
+    }
+  };
+
   const hostName = session?.participants?.find(
     (participant) => participant.role === "host",
   )?.name;
@@ -173,6 +203,34 @@ export default function ItemsPage() {
         </div>
 
         <div className="rounded-[28px] bg-white p-6 shadow-[0_4px_15px_rgba(0,0,0,0.05)]">
+          <div className="mb-5 rounded-[20px] border border-[#e4e8f0] bg-[#fafafa] p-4">
+            <div className="text-[11px] font-bold tracking-[0.07em] text-[#aaa]">
+              {session?.taxLabel || "VAT / TAX"}
+            </div>
+            <div className="mt-2 flex flex-wrap items-center gap-3">
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                value={taxAmount}
+                onChange={(event) => setTaxAmount(event.target.value)}
+                className="h-[48px] w-full max-w-[180px] rounded-[14px] border border-[#e6e1de] bg-white px-4 text-[15px] outline-none"
+                placeholder="0.00"
+                aria-label="VAT or tax amount"
+              />
+              <button
+                type="button"
+                onClick={saveTax}
+                disabled={savingTax}
+                className="h-[48px] rounded-full bg-[#243b84] px-5 text-[14px] font-semibold text-white disabled:opacity-60"
+              >
+                {savingTax ? "Saving..." : "Save tax"}
+              </button>
+            </div>
+            <p className="mt-2 text-[12px] text-[#9aa0b4]">
+              This amount is split equally and is not selectable as an item.
+            </p>
+          </div>
           <div className="mb-3 text-[11px] font-bold tracking-[0.07em] text-[#aaa]">
             EDIT RECEIPT ITEMS
           </div>

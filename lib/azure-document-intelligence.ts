@@ -4,6 +4,7 @@ import {
   extractDocumentText,
   extractSuggestedItems,
 } from "@/lib/document-receipt-parser";
+import { analyzeReceiptWithGroq } from "@/lib/groq-receipt-parser";
 import type { DocumentScanResult } from "@/types/document-intelligence";
 
 const DEFAULT_API_VERSION = "2024-11-30";
@@ -16,7 +17,11 @@ export class AzureDocumentIntelligenceError extends Error {
   status: number;
   code: string;
 
-  constructor(message: string, status = 500, code = "azure_document_intelligence_error") {
+  constructor(
+    message: string,
+    status = 500,
+    code = "azure_document_intelligence_error",
+  ) {
     super(message);
     this.name = "AzureDocumentIntelligenceError";
     this.status = status;
@@ -25,9 +30,15 @@ export class AzureDocumentIntelligenceError extends Error {
 }
 
 export function getAzureDocumentIntelligenceConfig() {
-  const endpoint = String(process.env.AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT || "").trim().replace(/\/+$/, "");
+  const endpoint = String(
+    process.env.AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT || "",
+  )
+    .trim()
+    .replace(/\/+$/, "");
   const key = String(process.env.AZURE_DOCUMENT_INTELLIGENCE_KEY || "").trim();
-  const apiVersion = String(process.env.AZURE_DOCUMENT_INTELLIGENCE_API_VERSION || "").trim() || DEFAULT_API_VERSION;
+  const apiVersion =
+    String(process.env.AZURE_DOCUMENT_INTELLIGENCE_API_VERSION || "").trim() ||
+    DEFAULT_API_VERSION;
 
   if (!endpoint || !key) {
     throw new AzureDocumentIntelligenceError(
@@ -48,10 +59,11 @@ export function getAzureDocumentIntelligenceConfig() {
 }
 
 function sanitizeFileName(fileName: string) {
-  const baseName = String(fileName || "upload")
-    .split(/[\\/]/)
-    .pop()
-    ?.trim() || "upload";
+  const baseName =
+    String(fileName || "upload")
+      .split(/[\\/]/)
+      .pop()
+      ?.trim() || "upload";
 
   return baseName.replace(/[^\w.\-() ]+/g, "_").slice(0, 120) || "upload";
 }
@@ -104,13 +116,22 @@ async function readErrorMessage(response: Response) {
     }
 
     const text = await response.text();
-    return text.trim() || response.statusText || "Azure Document Intelligence returned an error.";
+    return (
+      text.trim() ||
+      response.statusText ||
+      "Azure Document Intelligence returned an error."
+    );
   } catch {
-    return response.statusText || "Azure Document Intelligence returned an error.";
+    return (
+      response.statusText || "Azure Document Intelligence returned an error."
+    );
   }
 }
 
-async function postDocumentForAnalysis(file: File, config: ReturnType<typeof getAzureDocumentIntelligenceConfig>) {
+async function postDocumentForAnalysis(
+  file: File,
+  config: ReturnType<typeof getAzureDocumentIntelligenceConfig>,
+) {
   const endpoint = new URL(
     `${config.endpoint}/documentintelligence/documentModels/${encodeURIComponent(config.modelId)}:analyze`,
   );
@@ -243,20 +264,31 @@ export async function analyzeDocumentWithAzure(file: File) {
   }
 
   const analyzeResult =
-    (analysisPayload as { analyzeResult?: Record<string, unknown> })?.analyzeResult ||
-    (analysisPayload as Record<string, unknown>);
+    (analysisPayload as { analyzeResult?: Record<string, unknown> })
+      ?.analyzeResult || (analysisPayload as Record<string, unknown>);
 
-  const pages = buildDocumentScanPages(analyzeResult as Parameters<typeof buildDocumentScanPages>[0]);
-  const tables = buildDocumentScanTables(analyzeResult as Parameters<typeof buildDocumentScanTables>[0]);
-  const text = extractDocumentText(analyzeResult as Parameters<typeof extractDocumentText>[0]);
-  const items = extractSuggestedItems(analyzeResult as Parameters<typeof extractSuggestedItems>[0]);
+  const pages = buildDocumentScanPages(
+    analyzeResult as Parameters<typeof buildDocumentScanPages>[0],
+  );
+  const tables = buildDocumentScanTables(
+    analyzeResult as Parameters<typeof buildDocumentScanTables>[0],
+  );
+  const text = extractDocumentText(
+    analyzeResult as Parameters<typeof extractDocumentText>[0],
+  );
+  const fallbackItems = extractSuggestedItems(
+    analyzeResult as Parameters<typeof extractSuggestedItems>[0],
+  );
+  const aiResult = await analyzeReceiptWithGroq(text, fallbackItems);
 
   const result: DocumentScanResult = {
     success: true,
     text,
     pages,
     tables,
-    items,
+    items: aiResult.items,
+    taxAmount: aiResult.taxAmount,
+    taxLabel: aiResult.taxLabel,
     raw: analysisPayload,
     fileName: safeName,
     fileType: file.type || "application/octet-stream",
