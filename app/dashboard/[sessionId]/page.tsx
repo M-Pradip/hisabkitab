@@ -93,9 +93,12 @@ export default async function SessionDetailPage({
     sessionData.hostName ||
     "Bill split session";
   const participantCount =
-    snapshot.metadata?.participantCount ?? sessionData.participants?.length ?? 0;
-  const itemCount = snapshot.metadata?.itemCount ?? sessionData.items?.length ?? 0;
-  const grandTotal = totals.grandTotal ?? Number(history.totalAmount);
+    snapshot.metadata?.participantCount ??
+    sessionData.participants?.length ??
+    0;
+  const itemCount =
+    snapshot.metadata?.itemCount ?? sessionData.items?.length ?? 0;
+  const grandTotal = Number(totals.grandTotal ?? history.totalAmount ?? 0);
   const billSummary = [
     `Total: ${history.currency} ${grandTotal.toFixed(2)}`,
     `Members: ${participantCount}`,
@@ -174,7 +177,11 @@ export default async function SessionDetailPage({
               <MiniStat label="Items" value={itemCount} />
               <MiniStat
                 label="Unassigned"
-                value={totals.hasUnassigned ? totals.unassignedItems?.length ?? 0 : 0}
+                value={
+                  totals.hasUnassigned
+                    ? (totals.unassignedItems?.length ?? 0)
+                    : 0
+                }
               />
             </div>
 
@@ -192,7 +199,9 @@ export default async function SessionDetailPage({
               </div>
               <div className="mt-4">
                 <ParticipantSharesClient
-                  sessionId={liveSession?.id || history.sourceSessionId || history.id}
+                  sessionId={
+                    liveSession?.id || history.sourceSessionId || history.id
+                  }
                   currency={history.currency}
                   sessionTitle={title}
                   billSummary={billSummary}
@@ -201,8 +210,8 @@ export default async function SessionDetailPage({
                       id: participant.id,
                       name: participant.name,
                       role: participant.role,
-                      total: participant.total,
-                      items: participant.items.map((item) => ({
+                      total: Number(participant.total || 0),
+                      items: (participant.items || []).map((item) => ({
                         id: item.id,
                         name: item.name,
                       })),
@@ -232,15 +241,29 @@ export default async function SessionDetailPage({
                 Session details
               </div>
               <dl className="mt-4 space-y-4 text-sm">
-                <Row label="Host" value={sessionData.hostName || history.hostName} />
-                <Row label="Session note" value={sessionData.sessionNote || "Not provided"} />
+                <Row
+                  label="Host"
+                  value={sessionData.hostName || history.hostName}
+                />
+                <Row
+                  label="Session note"
+                  value={sessionData.sessionNote || "Not provided"}
+                />
                 <Row
                   label="Payment method"
-                  value={sessionData.paymentMethod || sessionData.paymentProvider || "Unknown"}
+                  value={
+                    sessionData.paymentMethod ||
+                    sessionData.paymentProvider ||
+                    "Unknown"
+                  }
                 />
                 <Row
                   label="Closed at"
-                  value={sessionData.closedAt ? formatRelativeTime(sessionData.closedAt) : "Saved only"}
+                  value={
+                    sessionData.closedAt
+                      ? formatRelativeTime(sessionData.closedAt)
+                      : "Saved only"
+                  }
                 />
                 <Row
                   label="Last saved"
@@ -285,10 +308,15 @@ export default async function SessionDetailPage({
                     className="rounded-[18px] border border-slate-200 bg-slate-50 p-4"
                   >
                     <div className="flex items-center justify-between gap-3">
-                      <div className="font-medium text-slate-950">{item.name}</div>
+                      <div className="font-medium text-slate-950">
+                        {item.name}
+                      </div>
                       <div className="text-sm text-slate-600">
                         {item.quantity > 1 ? `${item.quantity}x ` : ""}
-                        {formatMoney(item.price * item.quantity, history.currency)}
+                        {formatMoney(
+                          item.price * item.quantity,
+                          history.currency,
+                        )}
                       </div>
                     </div>
                   </div>
@@ -303,19 +331,12 @@ export default async function SessionDetailPage({
             </Card>
           </div>
         </div>
-
       </div>
     </main>
   );
 }
 
-function MiniStat({
-  label,
-  value,
-}: {
-  label: string;
-  value: string | number;
-}) {
+function MiniStat({ label, value }: { label: string; value: string | number }) {
   return (
     <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
       <div className="text-xs uppercase tracking-[0.16em] text-slate-500">
@@ -326,13 +347,7 @@ function MiniStat({
   );
 }
 
-function Row({
-  label,
-  value,
-}: {
-  label: string;
-  value: string;
-}) {
+function Row({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex items-start justify-between gap-4 border-b border-slate-100 pb-3 last:border-b-0 last:pb-0">
       <dt className="text-slate-500">{label}</dt>
