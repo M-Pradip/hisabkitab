@@ -448,17 +448,6 @@ export default function DocumentScanner({
                     </div>
                   )}
                 </div>
-                {scanResult.taxAmount > 0 ? (
-                  <div className="mt-4 rounded-[18px] border border-[#e4e8f0] bg-white px-4 py-3">
-                    <div className="text-[13px] font-semibold text-[#1a1f3c]">
-                      {scanResult.taxLabel || "VAT / Tax"}
-                    </div>
-                    <div className="mt-1 text-[13px] text-[#6f6f86]">
-                      Rs {Number(scanResult.taxAmount).toFixed(2)} · split
-                      equally across all participants
-                    </div>
-                  </div>
-                ) : null}
               </div>
             </div>
 

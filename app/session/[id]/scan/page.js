@@ -31,12 +31,6 @@ export default function ScanReceiptPage() {
       type: "set_items",
       items: nextItems,
     });
-
-    await updateSession({
-      type: "set_receipt_tax",
-      taxAmount: result.taxAmount,
-      taxLabel: result.taxLabel,
-    });
   };
 
   if (status === "loading") {
@@ -72,11 +66,11 @@ export default function ScanReceiptPage() {
   const participantCount = session?.participants?.length || 0;
   const itemCount = session?.items?.length || 0;
   const totalText = `Rs ${(
-    (session?.items?.reduce(
+    session?.items?.reduce(
       (sum, item) =>
         sum + Number(item.price || 0) * Math.max(1, Number(item.quantity || 1)),
       0,
-    ) || 0) + Number(session?.taxAmount || 0)
+    ) || 0
   ).toLocaleString("en-IN")}`;
 
   return (

@@ -49,8 +49,6 @@ export default function SplitSummary({ participants = [], totals }) {
       </div>
 
       <div className="mt-4 rounded-[14px] border border-[#e2ddd8] bg-[#f5f0eb] px-4 py-3 text-sm leading-6 text-[#3d3d5c]">
-        VAT / tax split equally: {formatCurrency(totals?.taxAmount || 0)}
-        <br />
         Unassigned items total:{" "}
         <span className="font-bold text-[#1a1a2e]">
           {formatCurrency(totals?.unassignedTotal || 0)}
